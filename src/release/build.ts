@@ -60,14 +60,19 @@ async function writeManifest(c: Common & { projectDir: string; project: string; 
   };
   const bytes = Buffer.from(JSON.stringify(manifest, null, 2) + '\n');
   const signature = await c.sign(bytes);
-  // Order matters: the signature file is replaced first, the manifest last, so a client never sees a
-  // new manifest with an old signature for longer than the instant between the two renames.
-  await atomicWrite(path.join(c.projectDir, 'manifest.json.sig'), b64u(signature) + '\n');
-  await atomicWrite(path.join(c.projectDir, 'manifest.json'), bytes);
+  // Both files are written completely first and only then renamed (signature, then manifest), so a failure
+  // while writing never leaves a new manifest next to an old signature.
+  const sigTmp = path.join(c.projectDir, `manifest.json.sig.tmp-${process.pid}`);
+  const manTmp = path.join(c.projectDir, `manifest.json.tmp-${process.pid}`);
+  await writeFile(sigTmp, b64u(signature) + '\n');
+  await writeFile(manTmp, bytes);
+  await rename(sigTmp, path.join(c.projectDir, 'manifest.json.sig'));
+  await rename(manTmp, path.join(c.projectDir, 'manifest.json'));
   return manifest;
 }
 
-export async function buildRelease(input: BuildInput & Common): Promise<Manifest> {
+// Validates all texts and resolves the fallback chain. Pure: no files, no signing. Returns one complete text map per language.
+export function resolveTexts(input: BuildInput): Record<string, Texts> {
   const { project, sourceLanguage, languages, texts, fallback = {} } = input;
   if (!isProjectSlug(project)) throw new Error('invalid project slug');
   for (const l of languages) if (!isLanguageTag(l)) throw new Error(`invalid language tag ${l}`);
@@ -82,13 +87,7 @@ export async function buildRelease(input: BuildInput & Common): Promise<Manifest
       validateText(`${l}:${k}`, v, src);
     }
   }
-
-  const projectDir = path.join(input.releasesDir, 'p', project);
-  const release = await nextReleaseNumber(projectDir);
-  const dir = path.join(projectDir, 'r', String(release));
-  await mkdir(dir, { recursive: true });
-
-  const files: Record<string, FileInfo> = {};
+  const out: Record<string, Texts> = {};
   for (const l of languages) {
     const chain = [l, ...(fallback[l] ?? []), sourceLanguage];
     const merged: Texts = {};
@@ -98,6 +97,45 @@ export async function buildRelease(input: BuildInput & Common): Promise<Manifest
         if (t !== undefined) { merged[key] = t; break; }
       }
     }
+    out[l] = merged;
+  }
+  return out;
+}
+
+export interface TextDiff { added: string[]; changed: string[]; removed: string[] }
+
+export function diffTexts(before: Texts | undefined, after: Texts): TextDiff {
+  const b = before ?? {};
+  return {
+    added: Object.keys(after).filter((k) => !(k in b)).sort(),
+    changed: Object.keys(after).filter((k) => k in b && b[k] !== after[k]).sort(),
+    removed: Object.keys(b).filter((k) => !(k in after)).sort(),
+  };
+}
+
+// The texts of the currently published release, read from our own files (not a client verification).
+export async function readLive(releasesDir: string, project: string): Promise<{ release: number; texts: Record<string, Texts> } | null> {
+  const dir = path.join(releasesDir, 'p', project);
+  try {
+    const m = JSON.parse(await readFile(path.join(dir, 'manifest.json'), 'utf8')) as Manifest;
+    const texts: Record<string, Texts> = {};
+    for (const [tag, e] of Object.entries(m.languages)) texts[tag] = JSON.parse(await readFile(path.join(dir, e.path), 'utf8')) as Texts;
+    return { release: m.release, texts };
+  } catch {
+    return null;
+  }
+}
+
+export async function buildRelease(input: BuildInput & Common & { releaseNumber?: number }): Promise<Manifest> {
+  const resolved = resolveTexts(input);
+  const projectDir = path.join(input.releasesDir, 'p', input.project);
+  const release = input.releaseNumber ?? (await nextReleaseNumber(projectDir));
+  const dir = path.join(projectDir, 'r', String(release));
+  await mkdir(path.join(projectDir, 'r'), { recursive: true });
+  await mkdir(dir); // fails if the release directory already exists: published releases are never overwritten
+
+  const files: Record<string, FileInfo> = {};
+  for (const [l, merged] of Object.entries(resolved)) {
     const bytes = canonical(merged);
     await atomicWrite(path.join(dir, `${l}.json`), bytes);
     files[l] = { bytes, count: Object.keys(merged).length };
@@ -106,13 +144,13 @@ export async function buildRelease(input: BuildInput & Common): Promise<Manifest
 }
 
 // Rollback = a NEW release (higher number) that carries the content of an old one.
-export async function rollbackRelease(input: Common & { project: string; toRelease: number }): Promise<Manifest> {
+export async function rollbackRelease(input: Common & { project: string; toRelease: number; releaseNumber?: number }): Promise<Manifest> {
   const projectDir = path.join(input.releasesDir, 'p', input.project);
   const old = path.join(projectDir, 'r', String(input.toRelease));
   const { sourceLanguage } = JSON.parse(await readFile(path.join(projectDir, 'manifest.json'), 'utf8')) as Manifest;
-  const release = await nextReleaseNumber(projectDir);
+  const release = input.releaseNumber ?? (await nextReleaseNumber(projectDir));
   const dir = path.join(projectDir, 'r', String(release));
-  await mkdir(dir, { recursive: true });
+  await mkdir(dir);
   const files: Record<string, FileInfo> = {};
   for (const name of await readdir(old)) {
     if (!name.endsWith('.json')) continue;

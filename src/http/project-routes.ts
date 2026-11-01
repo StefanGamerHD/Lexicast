@@ -1,11 +1,12 @@
 import type { User } from '../auth/service.ts';
 import type { Keys } from '../projects/keys.ts';
 import type { Projects } from '../projects/service.ts';
+import type { Releases } from '../releases/service.ts';
 import type { Review } from '../review/service.ts';
 import { str } from './util.ts';
 
 export interface RouteCtx { user: User; params: string[]; body: Record<string, unknown>; query: URLSearchParams }
-export interface Route { method: string; pattern: RegExp; body: boolean; bodyLimit?: number; handle: (c: RouteCtx) => { status: number; body: unknown } }
+export interface Route { method: string; pattern: RegExp; body: boolean; bodyLimit?: number; handle: (c: RouteCtx) => { status: number; body: unknown } | Promise<{ status: number; body: unknown }> }
 
 const SLUG = '([a-z0-9][a-z0-9-]*)';
 const TAG = '([A-Za-z0-9-]+)';
@@ -13,7 +14,7 @@ const KEY = '([^/]+)';
 const ID = '([0-9]{1,9})';
 
 // Authenticated routes; every handler enforces project roles inside the services.
-export function createProjectRoutes({ projects, keys, review, baseUrl }: { projects: Projects; keys: Keys; review: Review; baseUrl: string }): Route[] {
+export function createProjectRoutes({ projects, keys, review, releases, baseUrl }: { projects: Projects; keys: Keys; review: Review; releases: Releases; baseUrl: string }): Route[] {
   const r = (method: string, pattern: string, body: boolean, handle: Route['handle']): Route => ({ method, pattern: new RegExp(`^${pattern}$`), body, handle });
   const int = (v: string | null): number | undefined => (v !== null && /^\d{1,6}$/.test(v) ? Number(v) : undefined);
   return [
@@ -46,6 +47,10 @@ export function createProjectRoutes({ projects, keys, review, baseUrl }: { proje
     r('POST', `/projects/${SLUG}/suggestions/${ID}/approve`, true, (c) => ({ status: 200, body: review.approve(c.user, c.params[0]!, Number(c.params[1])) })),
     r('POST', `/projects/${SLUG}/suggestions/${ID}/reject`, true, (c) => ({ status: 200, body: review.reject(c.user, c.params[0]!, Number(c.params[1]), c.body.reason) })),
     r('POST', `/projects/${SLUG}/suggestions/${ID}/withdraw`, true, (c) => ({ status: 200, body: review.withdraw(c.user, c.params[0]!, Number(c.params[1])) })),
+    r('GET', `/projects/${SLUG}/releases`, false, (c) => ({ status: 200, body: releases.list(c.user, c.params[0]!) })),
+    r('GET', `/projects/${SLUG}/releases/preview`, false, async (c) => ({ status: 200, body: await releases.preview(c.user, c.params[0]!) })),
+    r('POST', `/projects/${SLUG}/releases`, true, async (c) => ({ status: 201, body: await releases.create(c.user, c.params[0]!, c.body) })),
+    r('POST', `/projects/${SLUG}/releases/${ID}/rollback`, true, async (c) => ({ status: 201, body: await releases.rollback(c.user, c.params[0]!, Number(c.params[1]), c.body) })),
     r('PATCH', `/projects/${SLUG}/keys/${KEY}`, true, (c) => ({ status: 200, body: keys.update(c.user, c.params[0]!, str(c.params[1], 'key'), c.body) })),
   ];
 }

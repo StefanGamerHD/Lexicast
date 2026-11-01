@@ -2,7 +2,7 @@
 
 Self-hostable server for translations that are reviewed by a second person, signed, and delivered live to running apps.
 
-Status: early. Exists: signed releases with rollback, static delivery, database schema, instance setup, sign-in and invitations (JSON API), signing key in a separate signer process. Projects, members with roles per language, keys and JSON import (with preview) exist as API. Suggestions and review (four-eyes, solo mode as logged exception) exist as API. Not built yet: editor, release from the database, mail transport. Not ready for production use.
+Status: early. Exists: signed releases with rollback, static delivery, database schema, instance setup, sign-in and invitations (JSON API), signing key in a separate signer process. Projects, members with roles per language, keys and JSON import (with preview) exist as API. Suggestions and review (four-eyes, solo mode as logged exception) exist as API. Releases (preview, build, signed publish, rollback) exist as API. Not built yet: editor, public progress page, mail transport. Not ready for production use.
 
 ## What it does (planned for v1)
 - Translators suggest texts in a web editor, a second person approves, the owner presses "release".
@@ -34,7 +34,11 @@ The response contains the public signing key and its fingerprint: embed the publ
 | `POST /projects/{slug}/suggestions`, `GET .../suggestions[?mine=1&language=&state=]` | translators, reviewers, owners suggest in their languages; reviewers/owners get the queue of their languages, everybody can list their own |
 | `POST .../suggestions/{id}/approve`, `.../reject` (reason required), `.../withdraw` | reviewers/owners of that language (never for their own text, except owners in solo mode); the author withdraws |
 
-An approved text becomes the current translation but is not live until a release is built. A suggestion written against an older source text is flagged and cannot be approved.
+| `GET /projects/{slug}/releases/preview` | owners: what a release would contain, change list per language, open suggestions, solo-mode approvals |
+| `POST /projects/{slug}/releases` (`note`), `POST .../releases/{n}/rollback` | owners; one release per project at a time; a failed build changes nothing that is live |
+| `GET /projects/{slug}/releases` | any member: history with notes, change summary, failures |
+
+An approved text becomes the current translation but is not live until a release is built. Releases contain active keys and translations that are not outdated; deprecated keys disappear with the next release. A rollback is a new release with a higher number, so clients accept it. A suggestion written against an older source text is flagged and cannot be approved.
 
 Non-members get 404 for project URLs; the instance admin has no implicit access to projects.
 
