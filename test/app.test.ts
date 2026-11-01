@@ -88,7 +88,7 @@ test('healthz reports ok and the schema version without secrets', async () => {
   try {
     const r = await fetch(`${s.base}/healthz`);
     assert.equal(r.status, 200);
-    assert.deepEqual(await r.json(), { status: 'ok', schema: 1 });
+    assert.deepEqual(await r.json(), { status: 'ok', schema: 2 });
   } finally { await s.stop(); }
 });
 
