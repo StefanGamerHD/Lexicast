@@ -5,6 +5,8 @@ import type { Auth } from './auth/service.ts';
 import type { Config } from './config.ts';
 import { createDeliveryHandler } from './delivery/handler.ts';
 import { createApiHandler } from './http/api.ts';
+import { createKeys } from './projects/keys.ts';
+import { createProjects } from './projects/service.ts';
 import type { Signer } from './signer/client.ts';
 
 export interface AppDeps { config: Config; db: DatabaseSync; auth: Auth; signer: Signer }
@@ -16,7 +18,9 @@ export function createApp({ config, db, auth, signer }: AppDeps): http.Server {
     allowedOrigins: config.allowedOrigins,
     trustProxyHeader: config.trustProxyHeader,
   });
-  const api = createApiHandler({ config, auth, signer });
+  const projects = createProjects(db);
+  const keys = createKeys(db, projects);
+  const api = createApiHandler({ config, auth, signer, projects, keys });
 
   return http.createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
