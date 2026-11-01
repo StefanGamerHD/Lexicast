@@ -2,7 +2,7 @@
 
 Self-hostable server for translations that are reviewed by a second person, signed, and delivered live to running apps.
 
-Status: early. Exists: signed releases with rollback, static delivery, database schema, instance setup, sign-in and invitations (JSON API), signing key in a separate signer process. Projects, members with roles per language, keys and JSON import (with preview) exist as API. Not built yet: editor, suggestions and review workflow, release from the database, mail transport. Not ready for production use.
+Status: early. Exists: signed releases with rollback, static delivery, database schema, instance setup, sign-in and invitations (JSON API), signing key in a separate signer process. Projects, members with roles per language, keys and JSON import (with preview) exist as API. Suggestions and review (four-eyes, solo mode as logged exception) exist as API. Not built yet: editor, release from the database, mail transport. Not ready for production use.
 
 ## What it does (planned for v1)
 - Translators suggest texts in a web editor, a second person approves, the owner presses "release".
@@ -29,6 +29,12 @@ The response contains the public signing key and its fingerprint: embed the publ
 | `GET/POST /projects/{slug}/members`, `POST .../members/remove` | owners (existing accounts are added, unknown emails get an invitation link) |
 | `GET/POST /projects/{slug}/keys`, `PATCH .../keys/{name}` | members read (translators and reviewers see their languages only); owners write |
 | `POST /projects/{slug}/keys/import` | owners; `apply:false` previews, `apply:true` writes, `deprecateMissing:true` marks absent keys deprecated |
+
+| `PATCH /projects/{slug}` | owners: name, `soloMode`, `progressPublic` |
+| `POST /projects/{slug}/suggestions`, `GET .../suggestions[?mine=1&language=&state=]` | translators, reviewers, owners suggest in their languages; reviewers/owners get the queue of their languages, everybody can list their own |
+| `POST .../suggestions/{id}/approve`, `.../reject` (reason required), `.../withdraw` | reviewers/owners of that language (never for their own text, except owners in solo mode); the author withdraws |
+
+An approved text becomes the current translation but is not live until a release is built. A suggestion written against an older source text is flagged and cannot be approved.
 
 Non-members get 404 for project URLs; the instance admin has no implicit access to projects.
 

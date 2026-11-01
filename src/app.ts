@@ -7,6 +7,7 @@ import { createDeliveryHandler } from './delivery/handler.ts';
 import { createApiHandler } from './http/api.ts';
 import { createKeys } from './projects/keys.ts';
 import { createProjects } from './projects/service.ts';
+import { createReview } from './review/service.ts';
 import type { Signer } from './signer/client.ts';
 
 export interface AppDeps { config: Config; db: DatabaseSync; auth: Auth; signer: Signer }
@@ -20,7 +21,8 @@ export function createApp({ config, db, auth, signer }: AppDeps): http.Server {
   });
   const projects = createProjects(db);
   const keys = createKeys(db, projects);
-  const api = createApiHandler({ config, auth, signer, projects, keys });
+  const review = createReview(db, projects);
+  const api = createApiHandler({ config, auth, signer, projects, keys, review });
 
   return http.createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://localhost');

@@ -4,16 +4,17 @@ import type { Auth, User } from '../auth/service.ts';
 import type { Config } from '../config.ts';
 import type { Keys } from '../projects/keys.ts';
 import type { Projects } from '../projects/service.ts';
+import type { Review } from '../review/service.ts';
 import type { Signer } from '../signer/client.ts';
 import { createProjectRoutes } from './project-routes.ts';
 import { fingerprint } from '../signer/client.ts';
 import { ApiError, createLimiter, parseCookies, readJson, sendJson, sessionCookie, str } from './util.ts';
 
-export interface ApiDeps { config: Config; auth: Auth; signer: Signer; projects: Projects; keys: Keys }
+export interface ApiDeps { config: Config; auth: Auth; signer: Signer; projects: Projects; keys: Keys; review: Review }
 
 // JSON API under /api/v1. Cookie-authenticated, so every state-changing request must come from our own origin.
-export function createApiHandler({ config, auth, signer, projects, keys }: ApiDeps) {
-  const routes = createProjectRoutes({ projects, keys, baseUrl: config.baseUrl });
+export function createApiHandler({ config, auth, signer, projects, keys, review }: ApiDeps) {
+  const routes = createProjectRoutes({ projects, keys, review, baseUrl: config.baseUrl });
   const origin = new URL(config.baseUrl).origin;
   const secure = config.baseUrl.startsWith('https://');
   const cookieName = secure ? '__Host-lexicast' : 'lexicast_session';

@@ -90,6 +90,22 @@ export function createProjects(db: DatabaseSync, now: () => number = Date.now) {
     return loadProject('slug = ?', input.slug)!;
   }
 
+  function updateSettings(user: User, slug: string, b: Record<string, unknown>): Project {
+    const { project } = ownerAccess(user, slug);
+    const name = 'name' in b ? b.name : project.name;
+    if (typeof name !== 'string' || !name.trim() || name.length > 100) throw new ApiError(400, 'invalid_name', 'name is missing or too long');
+    const flag = (k: string, current: boolean): boolean => {
+      if (!(k in b)) return current;
+      if (typeof b[k] !== 'boolean') throw new ApiError(400, 'invalid_field', `${k} must be true or false`);
+      return b[k] as boolean;
+    };
+    const solo = flag('soloMode', project.soloMode);
+    const pub = flag('progressPublic', project.progressPublic);
+    db.prepare('UPDATE projects SET name = ?, solo_mode = ?, progress_public = ? WHERE id = ?').run(name.trim(), solo ? 1 : 0, pub ? 1 : 0, project.id);
+    audit(user.id, 'project.settings', slug, undefined, { soloMode: solo, progressPublic: pub });
+    return loadProject('id = ?', project.id)!;
+  }
+
   function listFor(user: User): { slug: string; name: string; roles: string[] }[] {
     const rows = db.prepare(`SELECT p.slug, p.name, m.role, m.language FROM members m JOIN projects p ON p.id = m.project_id WHERE m.user_id = ? ORDER BY p.slug`).all(user.id) as { slug: string; name: string; role: string; language: string }[];
     const by = new Map<string, { slug: string; name: string; roles: string[] }>();
@@ -162,6 +178,6 @@ export function createProjects(db: DatabaseSync, now: () => number = Date.now) {
     } catch (e) { db.exec('ROLLBACK'); throw e; }
   }
 
-  return { access, ownerAccess, create, listFor, setLanguage, listMembers, addMember, removeMember, audit };
+  return { access, ownerAccess, create, updateSettings, listFor, setLanguage, listMembers, addMember, removeMember, audit };
 }
 export type Projects = ReturnType<typeof createProjects>;
