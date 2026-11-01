@@ -2,7 +2,7 @@
 
 Self-hostable server for translations that are reviewed by a second person, signed, and delivered live to running apps.
 
-Status: early. Exists: signed releases with rollback, static delivery, database schema, instance setup, sign-in and invitations (JSON API), signing key in a separate signer process. Projects, members with roles per language, keys and JSON import (with preview) exist as API. Suggestions and review (four-eyes, solo mode as logged exception) exist as API. Releases (preview, build, signed publish, rollback) exist as API. Not built yet: editor, public progress page, mail transport. Not ready for production use.
+Status: early. Exists: signed releases with rollback, static delivery, database schema, instance setup, sign-in and invitations (JSON API), signing key in a separate signer process. Projects, members with roles per language, keys and JSON import (with preview) exist as API. Suggestions and review (four-eyes, solo mode as logged exception) exist as API. Releases (preview, build, signed publish, rollback) exist as API. Public progress page exists (de/en). Not built yet: editor, mail transport. Not ready for production use.
 
 ## What it does (planned for v1)
 - Translators suggest texts in a web editor, a second person approves, the owner presses "release".
@@ -37,6 +37,10 @@ The response contains the public signing key and its fingerprint: embed the publ
 | `GET /projects/{slug}/releases/preview` | owners: what a release would contain, change list per language, open suggestions, solo-mode approvals |
 | `POST /projects/{slug}/releases` (`note`), `POST .../releases/{n}/rollback` | owners; one release per project at a time; a failed build changes nothing that is live |
 | `GET /projects/{slug}/releases` | any member: history with notes, change summary, failures |
+
+| `GET /progress/{slug}` (HTML), `GET /api/v1/public/projects/{slug}/progress` (JSON) | public, no sign-in; counts only (no key names, texts or people); 404 when the project is unknown or `progressPublic` is off, so existence is not revealed |
+
+The progress page needs no JavaScript, follows the browser language (German or English) and the light/dark setting, and is served with a strict Content-Security-Policy.
 
 An approved text becomes the current translation but is not live until a release is built. Releases contain active keys and translations that are not outdated; deprecated keys disappear with the next release. A rollback is a new release with a higher number, so clients accept it. A suggestion written against an older source text is flagged and cannot be approved.
 
