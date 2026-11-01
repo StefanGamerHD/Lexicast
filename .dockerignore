@@ -1,0 +1,8 @@
+.git
+node_modules
+data
+keys
+test
+.github
+*.md
+!README.md

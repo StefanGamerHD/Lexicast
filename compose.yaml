@@ -1,0 +1,24 @@
+services:
+  lexicast:
+    build: .
+    image: lexicast:dev
+    restart: unless-stopped
+    # Bound to localhost: put a reverse proxy (TLS) in front. Never publish this port directly.
+    ports:
+      - "127.0.0.1:8787:8787"
+    volumes:
+      - lexicast-data:/data
+    environment:
+      LEXICAST_RATE_PER_MINUTE: "600"
+      # Behind Cloudflare set: LEXICAST_TRUST_PROXY_HEADER: cf-connecting-ip
+      # Restrict browsers to your apps: LEXICAST_ALLOWED_ORIGINS: https://app.example
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  lexicast-data:
