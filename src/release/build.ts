@@ -1,4 +1,4 @@
-import { createHash, createPrivateKey, sign } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { isLanguageTag, isProjectSlug, validateText } from './validate.ts';
@@ -22,7 +22,9 @@ export interface BuildInput {
   texts: Record<string, Texts>;
 }
 
-interface Common { releasesDir: string; privateKeyPem: string; now?: () => number }
+export type SignFn = (bytes: Buffer) => Promise<Uint8Array>;
+
+interface Common { releasesDir: string; sign: SignFn; now?: () => number }
 
 export const b64u = (buf: Uint8Array): string => Buffer.from(buf).toString('base64url');
 const sha256hex = (buf: Uint8Array): string => createHash('sha256').update(buf).digest('hex');
@@ -57,7 +59,7 @@ async function writeManifest(c: Common & { projectDir: string; project: string; 
     sourceLanguage: c.sourceLanguage, languages,
   };
   const bytes = Buffer.from(JSON.stringify(manifest, null, 2) + '\n');
-  const signature = sign(null, bytes, createPrivateKey(c.privateKeyPem));
+  const signature = await c.sign(bytes);
   // Order matters: the signature file is replaced first, the manifest last, so a client never sees a
   // new manifest with an old signature for longer than the instant between the two renames.
   await atomicWrite(path.join(c.projectDir, 'manifest.json.sig'), b64u(signature) + '\n');

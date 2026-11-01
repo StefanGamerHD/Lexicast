@@ -1,21 +1,28 @@
 import http from 'node:http';
 import path from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
+import type { Auth } from './auth/service.ts';
 import type { Config } from './config.ts';
 import { createDeliveryHandler } from './delivery/handler.ts';
+import { createApiHandler } from './http/api.ts';
+import type { Signer } from './signer/client.ts';
 
-export function createApp(config: Config, db: DatabaseSync): http.Server {
+export interface AppDeps { config: Config; db: DatabaseSync; auth: Auth; signer: Signer }
+
+export function createApp({ config, db, auth, signer }: AppDeps): http.Server {
   const delivery = createDeliveryHandler({
     root: path.join(config.dataDir, 'releases'),
     ratePerMinute: config.ratePerMinute,
     allowedOrigins: config.allowedOrigins,
     trustProxyHeader: config.trustProxyHeader,
   });
+  const api = createApiHandler({ config, auth, signer });
 
   return http.createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
     res.setHeader('Referrer-Policy', 'no-referrer');
     if (await delivery(req, res, url)) return;
+    if (await api(req, res, url)) return;
 
     if (url.pathname === '/healthz' && (req.method === 'GET' || req.method === 'HEAD')) {
       let ok = true;

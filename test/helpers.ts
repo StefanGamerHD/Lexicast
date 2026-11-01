@@ -1,14 +1,14 @@
-import { createHash, generateKeyPairSync, verify, type KeyObject } from 'node:crypto';
+import { createHash, generateKeyPairSync, sign as cryptoSign, verify, type KeyObject } from 'node:crypto';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import type { Manifest } from '../src/release/build.ts';
 
-export interface Keys { privateKeyPem: string; publicKey: KeyObject }
+export interface Keys { publicKey: KeyObject; sign: (bytes: Buffer) => Promise<Uint8Array> }
 
 export function newKeys(): Keys {
   const k = generateKeyPairSync('ed25519');
-  return { privateKeyPem: k.privateKey.export({ type: 'pkcs8', format: 'pem' }) as string, publicKey: k.publicKey };
+  return { publicKey: k.publicKey, sign: async (bytes) => cryptoSign(null, bytes, k.privateKey) };
 }
 
 export async function tmpDir(): Promise<{ dir: string; cleanup: () => Promise<void> }> {
