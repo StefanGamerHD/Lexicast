@@ -2,7 +2,11 @@
 node_modules
 data
 keys
+dist
 test
+e2e
+test-results
+playwright-report
 .github
 *.md
 !README.md

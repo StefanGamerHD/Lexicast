@@ -1,4 +1,13 @@
-# Lexicast server: no build step (Node runs the TypeScript directly); one runtime dependency (nodemailer), installed from the lock file.
+# Lexicast server. Stage 1 builds the editor UI (Vite, dev dependencies); the final image has no build tools:
+# Node runs the TypeScript directly, one runtime dependency (nodemailer) from the lock file, plus the built UI files.
+FROM node:24-alpine AS web
+WORKDIR /build
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts
+COPY vite.config.ts ./
+COPY web ./web
+RUN npm run build:web
+
 FROM node:24-alpine
 ENV NODE_ENV=production \
     LEXICAST_HOST=0.0.0.0 \
@@ -8,6 +17,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 COPY src ./src
+COPY --from=web /build/dist/web ./dist/web
 RUN addgroup -S lexicast && adduser -S -G lexicast -H lexicast \
     && mkdir /data && chown lexicast:lexicast /data
 USER lexicast
