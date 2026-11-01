@@ -2,6 +2,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { ApiError } from '../http/util.ts';
 import { validateText } from '../release/validate.ts';
 import type { User } from '../auth/service.ts';
+import type { Notifier } from '../notify/service.ts';
 import type { Projects } from './service.ts';
 
 const KEY_NAME = /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,199}$/;
@@ -26,8 +27,15 @@ export function flatten(input: unknown, out: Record<string, string> = {}, prefix
   return out;
 }
 
-export function createKeys(db: DatabaseSync, projects: Projects, now: () => number = Date.now) {
+export function createKeys(db: DatabaseSync, projects: Projects, now: () => number = Date.now, notifier?: Notifier) {
   const iso = () => new Date(now()).toISOString();
+
+  // Tells the people of the affected languages that translations became outdated (counted before they are marked).
+  function notifyOutdated(projectId: number, keyIds: number[], actorId: number): void {
+    if (!notifier || !keyIds.length) return;
+    const rows = db.prepare(`SELECT language, COUNT(*) AS n FROM translations WHERE outdated = 1 AND key_id IN (${keyIds.map(() => '?').join(',')}) GROUP BY language`).all(...keyIds) as { language: string; n: number }[];
+    for (const r of rows) notifier.enqueue(notifier.languageMembers(projectId, r.language), projectId, 'source_changed', { language: r.language, count: r.n }, actorId);
+  }
 
   function checkSource(name: string, text: unknown, maxLength: number | null): string {
     try { validateText(name, text); } catch (e) { throw new ApiError(400, 'invalid_text', (e as Error).message); }
@@ -100,6 +108,7 @@ export function createKeys(db: DatabaseSync, projects: Projects, now: () => numb
       if (text !== k.source_text) db.prepare('UPDATE translations SET outdated = 1 WHERE key_id = ?').run(k.id);
       projects.audit(user.id, 'key.update', slug, name, { sourceChanged: text !== k.source_text, state });
       db.exec('COMMIT');
+      if (text !== k.source_text) notifyOutdated(project.id, [k.id], user.id);
     } catch (e) { db.exec('ROLLBACK'); throw e; }
     return { name, outdatedMarked: text !== k.source_text };
   }
@@ -143,6 +152,7 @@ export function createKeys(db: DatabaseSync, projects: Projects, now: () => numb
         if (deprecateMissing) for (const n of removed) dep.run(iso(), existing.get(n)!.id);
         projects.audit(user.id, 'key.import', slug, undefined, { added: added.length, changed: changed.length, reactivated: reactivated.length, deprecated: deprecateMissing ? removed.length : 0 });
         db.exec('COMMIT');
+        notifyOutdated(project.id, changed.map((n) => existing.get(n)!.id), user.id);
       } catch (e) { db.exec('ROLLBACK'); throw e; }
     }
     return { applied: apply, added, changed, reactivated, unchanged, removed, removedAreDeprecated: apply && deprecateMissing };

@@ -1,7 +1,11 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createHash } from 'node:crypto';
 import type { Auth, User } from '../auth/service.ts';
+import { normalizeEmail } from '../auth/crypto.ts';
 import type { Config } from '../config.ts';
+import type { Locale } from '../i18n.ts';
+import type { Mailer } from '../mail/mailer.ts';
+import type { Outbound } from '../mail/outbound.ts';
 import type { Keys } from '../projects/keys.ts';
 import type { Projects } from '../projects/service.ts';
 import type { Releases } from '../releases/service.ts';
@@ -9,13 +13,13 @@ import type { Review } from '../review/service.ts';
 import type { Signer } from '../signer/client.ts';
 import { createProjectRoutes } from './project-routes.ts';
 import { fingerprint } from '../signer/client.ts';
-import { ApiError, createLimiter, parseCookies, readJson, sendJson, sessionCookie, str } from './util.ts';
+import { ApiError, createLimiter, displayName, parseCookies, readJson, sendJson, sessionCookie, str } from './util.ts';
 
-export interface ApiDeps { config: Config; auth: Auth; signer: Signer; projects: Projects; keys: Keys; review: Review; releases: Releases }
+export interface ApiDeps { config: Config; auth: Auth; signer: Signer; projects: Projects; keys: Keys; review: Review; releases: Releases; mailer: Mailer; outbound: Outbound }
 
 // JSON API under /api/v1. Cookie-authenticated, so every state-changing request must come from our own origin.
-export function createApiHandler({ config, auth, signer, projects, keys, review, releases }: ApiDeps) {
-  const routes = createProjectRoutes({ projects, keys, review, releases, baseUrl: config.baseUrl });
+export function createApiHandler({ config, auth, signer, projects, keys, review, releases, mailer, outbound }: ApiDeps) {
+  const routes = createProjectRoutes({ projects, keys, review, releases, mailer, outbound, baseUrl: config.baseUrl });
   const origin = new URL(config.baseUrl).origin;
   const secure = config.baseUrl.startsWith('https://');
   const cookieName = secure ? '__Host-lexicast' : 'lexicast_session';
@@ -50,7 +54,7 @@ export function createApiHandler({ config, auth, signer, projects, keys, review,
         }
         case 'POST /setup': {
           const b = await readJson(req);
-          const user = await auth.completeSetup({ setupToken: str(b.setupToken, 'setupToken'), email: b.email, displayName: str(b.displayName, 'displayName', 100), password: b.password });
+          const user = await auth.completeSetup({ setupToken: str(b.setupToken, 'setupToken'), email: b.email, displayName: displayName(b.displayName), password: b.password });
           const publicKey = await signer.publicKey(); // creates the signing key on first use
           const login = await auth.login(user.email, b.password);
           return sendJson(res, 201, { user, publicKey, fingerprint: fingerprint(publicKey) }, { 'Set-Cookie': sessionCookie(cookieName, login.token, cookieOpts) }), true;
@@ -65,18 +69,52 @@ export function createApiHandler({ config, auth, signer, projects, keys, review,
           return sendJson(res, 200, { ok: true }, { 'Set-Cookie': sessionCookie(cookieName, '', { ...cookieOpts, maxAgeSeconds: 0 }) }), true;
         }
         case 'GET /me':
-          return sendJson(res, 200, { user: requireUser(req) }), true;
+          return sendJson(res, 200, { user: requireUser(req), mailEnabled: mailer.enabled }), true;
+        case 'PATCH /me': {
+          const user = requireUser(req);
+          return sendJson(res, 200, { user: auth.updateProfile(user, await readJson(req)) }), true;
+        }
+        case 'POST /me/password': {
+          const user = requireUser(req);
+          const b = await readJson(req);
+          await auth.changePassword(user, sessionToken(req), b.currentPassword, b.newPassword);
+          if (mailer.enabled) void outbound.sendPasswordChanged({ to: user.email, locale: user.uiLocale as Locale }).catch((e: Error) => console.error('mail failed:', e.message));
+          return sendJson(res, 200, { ok: true }), true;
+        }
+        case 'POST /auth/password-reset/request': {
+          const b = await readJson(req);
+          if (!mailer.enabled) throw new ApiError(503, 'mail_disabled', 'Password reset by email is not configured on this instance; ask the instance admin');
+          const r = auth.requestPasswordReset(b.email);
+          // Not awaited and always the same answer: neither the response nor its timing shows whether the account exists.
+          if (r) void outbound.sendPasswordReset({ to: r.email, token: r.token, locale: r.locale }).catch((e: Error) => console.error('reset mail failed:', e.message));
+          return sendJson(res, 202, { ok: true }), true;
+        }
+        case 'POST /auth/password-reset/confirm': {
+          const b = await readJson(req);
+          const r = await auth.confirmPasswordReset(b.token, b.password);
+          if (mailer.enabled) void outbound.sendPasswordChanged({ to: r.email, locale: r.locale }).catch((e: Error) => console.error('mail failed:', e.message));
+          return sendJson(res, 200, { ok: true }), true;
+        }
         case 'POST /invitations': {
           const admin = requireUser(req);
           if (!admin.isInstanceAdmin) throw new ApiError(403, 'forbidden', 'Only the instance admin can invite');
           const b = await readJson(req);
           const token = auth.createInvitation(admin, b.email);
-          // Shown once. Sending it by email arrives with the mail transport; until then the inviter passes it on.
-          return sendJson(res, 201, { inviteUrl: `${config.baseUrl}/invite/${token}` }), true;
+          const to = normalizeEmail(b.email)!;
+          const link = `${config.baseUrl}/invite/${token}`;
+          // With mail configured the link only travels by email. Without mail, or if sending fails, the inviter gets it once and passes it on.
+          if (!mailer.enabled) return sendJson(res, 201, { inviteUrl: link }), true;
+          try {
+            await outbound.sendInvitation({ to, token, inviter: admin.displayName, locale: admin.uiLocale as Locale });
+            return sendJson(res, 201, { sent: true }), true;
+          } catch (e) {
+            console.error('invitation mail failed:', (e as Error).message);
+            return sendJson(res, 201, { sent: false, mailError: true, inviteUrl: link }), true;
+          }
         }
         case 'POST /invitations/accept': {
           const b = await readJson(req);
-          const user = await auth.acceptInvitation(str(b.token, 'token'), str(b.displayName, 'displayName', 100), b.password);
+          const user = await auth.acceptInvitation(typeof b.token === 'string' ? b.token : '', displayName(b.displayName), b.password);
           const login = await auth.login(user.email, b.password);
           return sendJson(res, 201, { user }, { 'Set-Cookie': sessionCookie(cookieName, login.token, cookieOpts) }), true;
         }

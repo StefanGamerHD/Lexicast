@@ -39,7 +39,7 @@ const getLive = async (s: S, lang: string): Promise<Record<string, string>> => {
   const m = (await (await fetch(`${s.base}/p/demo/manifest.json`)).json()) as { release: number };
   return (await (await fetch(`${s.base}/p/demo/r/${m.release}/${lang}.json`)).json()) as Record<string, string>;
 };
-const adminUser = (s: S) => { const r = s.db.prepare("SELECT id, email, display_name AS displayName FROM users WHERE is_instance_admin = 1").get() as { id: number; email: string; displayName: string }; return { ...r, isInstanceAdmin: true, uiLocale: 'en', theme: 'system' }; };
+const adminUser = (s: S) => { const r = s.db.prepare("SELECT id, email, display_name AS displayName FROM users WHERE is_instance_admin = 1").get() as { id: number; email: string; displayName: string }; return { ...r, isInstanceAdmin: true, uiLocale: 'en', theme: 'system', notifyEmail: true }; };
 
 test('first release: owner only, needs keys, delivered over HTTP with a valid signature and fallback chain', async () => {
   const { s, admin, tina, translate, release } = await world();
