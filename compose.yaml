@@ -10,6 +10,8 @@ services:
       - lexicast-data:/data
     environment:
       LEXICAST_RATE_PER_MINUTE: "600"
+      # Public address behind your TLS proxy; required for correct origin checks and Secure cookies
+      LEXICAST_BASE_URL: ${LEXICAST_BASE_URL:-http://127.0.0.1:8787}
       # Behind Cloudflare set: LEXICAST_TRUST_PROXY_HEADER: cf-connecting-ip
       # Restrict browsers to your apps: LEXICAST_ALLOWED_ORIGINS: https://app.example
     read_only: true

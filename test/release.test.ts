@@ -9,7 +9,7 @@ import { newKeys, sampleInput, tmpDir, verifyRelease } from './helpers.ts';
 test('build produces a verifiable signed release with build-time fallback chain', async () => {
   const { dir, cleanup } = await tmpDir(); const k = newKeys();
   try {
-    const m = await buildRelease({ ...sampleInput, releasesDir: dir, privateKeyPem: k.privateKeyPem });
+    const m = await buildRelease({ ...sampleInput, releasesDir: dir, sign: k.sign });
     assert.equal(m.release, 1);
     assert.equal((await verifyRelease(dir, 'demo', k.publicKey)).release, 1);
     const at = JSON.parse(await readFile(path.join(dir, 'p/demo/r/1/de-AT.json'), 'utf8'));
@@ -22,11 +22,11 @@ test('build produces a verifiable signed release with build-time fallback chain'
 test('release numbers increase; rollback creates a NEW higher release with old content', async () => {
   const { dir, cleanup } = await tmpDir(); const k = newKeys();
   try {
-    await buildRelease({ ...sampleInput, releasesDir: dir, privateKeyPem: k.privateKeyPem });
+    await buildRelease({ ...sampleInput, releasesDir: dir, sign: k.sign });
     const changed = structuredClone(sampleInput);
     changed.texts.de!['dashboard.title'] = 'Start';
-    assert.equal((await buildRelease({ ...changed, releasesDir: dir, privateKeyPem: k.privateKeyPem })).release, 2);
-    const rb = await rollbackRelease({ releasesDir: dir, project: 'demo', toRelease: 1, privateKeyPem: k.privateKeyPem });
+    assert.equal((await buildRelease({ ...changed, releasesDir: dir, sign: k.sign })).release, 2);
+    const rb = await rollbackRelease({ releasesDir: dir, project: 'demo', toRelease: 1, sign: k.sign });
     assert.equal(rb.release, 3);
     await verifyRelease(dir, 'demo', k.publicKey);
     const de = JSON.parse(await readFile(path.join(dir, 'p/demo/r/3/de.json'), 'utf8'));
@@ -39,11 +39,11 @@ test('release numbers increase; rollback creates a NEW higher release with old c
 test('a failed build leaves the live manifest untouched', async () => {
   const { dir, cleanup } = await tmpDir(); const k = newKeys();
   try {
-    await buildRelease({ ...sampleInput, releasesDir: dir, privateKeyPem: k.privateKeyPem });
+    await buildRelease({ ...sampleInput, releasesDir: dir, sign: k.sign });
     const before = await readFile(path.join(dir, 'p/demo/manifest.json'), 'utf8');
     const bad = structuredClone(sampleInput);
     bad.texts.de!.greeting = 'Hallo {nam}';
-    await assert.rejects(buildRelease({ ...bad, releasesDir: dir, privateKeyPem: k.privateKeyPem }), /placeholders differ/);
+    await assert.rejects(buildRelease({ ...bad, releasesDir: dir, sign: k.sign }), /placeholders differ/);
     assert.equal(await readFile(path.join(dir, 'p/demo/manifest.json'), 'utf8'), before);
   } finally { await cleanup(); }
 });
@@ -65,15 +65,15 @@ test('unknown keys in a translation and bad slugs are rejected', async () => {
   try {
     const extra = structuredClone(sampleInput);
     extra.texts.de!['nope'] = 'x';
-    await assert.rejects(buildRelease({ ...extra, releasesDir: dir, privateKeyPem: k.privateKeyPem }), /unknown key/);
-    await assert.rejects(buildRelease({ ...sampleInput, project: '../x', releasesDir: dir, privateKeyPem: k.privateKeyPem }), /invalid project slug/);
+    await assert.rejects(buildRelease({ ...extra, releasesDir: dir, sign: k.sign }), /unknown key/);
+    await assert.rejects(buildRelease({ ...sampleInput, project: '../x', releasesDir: dir, sign: k.sign }), /invalid project slug/);
   } finally { await cleanup(); }
 });
 
 test('a tampered file or manifest is detected by the verifier', async () => {
   const { dir, cleanup } = await tmpDir(); const k = newKeys();
   try {
-    await buildRelease({ ...sampleInput, releasesDir: dir, privateKeyPem: k.privateKeyPem });
+    await buildRelease({ ...sampleInput, releasesDir: dir, sign: k.sign });
     const f = path.join(dir, 'p/demo/r/1/de.json');
     const orig = await readFile(f);
     await writeFile(f, orig.toString().replace('Übersicht', 'EVIL'));

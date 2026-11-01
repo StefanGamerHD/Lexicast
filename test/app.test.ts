@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { createApp } from '../src/app.ts';
+import { createAuth } from '../src/auth/service.ts';
 import { loadConfig } from '../src/config.ts';
 import { migrate, openDatabase } from '../src/db/migrate.ts';
 import { buildRelease } from '../src/release/build.ts';
@@ -12,11 +13,12 @@ async function start(over: Record<string, string> = {}) {
   const { dir, cleanup } = await tmpDir();
   const config = loadConfig({ LEXICAST_DATA_DIR: dir, LEXICAST_PORT: '1', ...over });
   const db = openDatabase(':memory:'); migrate(db);
-  const server = createApp(config, db);
+  const signer = { publicKey: async () => 'x', sign: async () => Buffer.alloc(64), close() {} };
+  const server = createApp({ config, db, auth: createAuth(db), signer });
   await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   const k = newKeys();
-  await buildRelease({ ...sampleInput, releasesDir: path.join(dir, 'releases'), privateKeyPem: k.privateKeyPem });
+  await buildRelease({ ...sampleInput, releasesDir: path.join(dir, 'releases'), sign: k.sign });
   return { base, k, stop: async () => { server.close(); db.close(); await cleanup(); } };
 }
 

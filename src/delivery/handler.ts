@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import path from 'node:path';
+import { createLimiter } from '../http/util.ts';
 
 const ALLOWED = /^\/p\/[a-z0-9-]+\/(manifest\.json(\.sig)?|r\/[0-9]+\/[A-Za-z0-9_-]+\.json)$/;
 
@@ -14,19 +15,8 @@ export interface DeliveryOptions {
 
 // Static delivery of the signed release tree. GET/HEAD only, fixed path allow-list, no cookies.
 export function createDeliveryHandler(o: DeliveryOptions) {
-  const hits = new Map<string, { minute: number; n: number }>();
   const root = path.resolve(o.root);
-  const limited = (ip: string): boolean => {
-    if (!o.ratePerMinute) return false;
-    const minute = Math.floor(Date.now() / 60000);
-    const e = hits.get(ip);
-    if (!e || e.minute !== minute) {
-      if (hits.size > 10_000) hits.clear();
-      hits.set(ip, { minute, n: 1 });
-      return false;
-    }
-    return ++e.n > o.ratePerMinute;
-  };
+  const limited = createLimiter(o.ratePerMinute);
 
   return async function handle(req: IncomingMessage, res: ServerResponse, url: URL): Promise<boolean> {
     if (!url.pathname.startsWith('/p/')) return false;
