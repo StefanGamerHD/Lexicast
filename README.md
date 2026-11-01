@@ -2,7 +2,7 @@
 
 Self-hostable server for translations that are reviewed by a second person, signed, and delivered live to running apps.
 
-Status: early. Exists: signed releases with rollback, static delivery, database schema, instance setup, sign-in and invitations (JSON API), signing key in a separate signer process. Projects, members with roles per language, keys and JSON import (with preview) exist as API. Suggestions and review (four-eyes, solo mode as logged exception) exist as API. Releases (preview, build, signed publish, rollback) exist as API. Public progress page exists (de/en). Mail (invitations, password reset, digest notifications) exists. Not built yet: the editor UI. Not ready for production use.
+Status: early. Exists: signed releases with rollback, static delivery, database schema, instance setup, sign-in and invitations (JSON API), signing key in a separate signer process. Projects, members with roles per language, keys and JSON import (with preview) exist as API. Suggestions and review (four-eyes, solo mode as logged exception) exist as API. Releases (preview, build, signed publish, rollback) exist as API. Public progress page exists (de/en). Mail (invitations, password reset, digest notifications) exists. The editor UI (Svelte) has started: setup, sign-in, invitation and password reset pages; the project screens follow. Not ready for production use.
 
 ## What it does (planned for v1)
 - Translators suggest texts in a web editor, a second person approves, the owner presses "release".
@@ -11,7 +11,7 @@ Status: early. Exists: signed releases with rollback, static delivery, database 
 - One container, SQLite, no external storage.
 
 ## First start
-On the first start the server prints a one-time setup token to its log. Create the admin account with it, from the address configured as `LEXICAST_BASE_URL`:
+On the first start the server prints a one-time setup token to its log. Open `LEXICAST_BASE_URL` in a browser: the setup page asks for the token and creates the admin account. Without the UI, use the API from that address:
 ```bash
 curl -X POST http://127.0.0.1:8787/api/v1/setup \
   -H 'Content-Type: application/json' -H 'Origin: http://127.0.0.1:8787' \
@@ -56,11 +56,25 @@ Set `LEXICAST_MAIL=smtp` with host, port, security (`starttls` by default, `tls`
 ## Signing key
 The private key is created on first use and stored read-only (mode 0400) in `LEXICAST_KEY_DIR`. It is loaded only by a separate signer process; the web process asks it to sign and never holds the key. This is process separation, not separate users: someone who can run code as the same OS user can still read the file. Back it up offline; losing it means every app must ship a new public key.
 
+## Editor UI
+A Svelte single-page app in `web/`, built by Vite into `dist/web` and served by the Node server (`LEXICAST_WEB_DIR` to change the folder). Vite and Svelte are build tools only; the container image holds the built files, not the toolchain. Without a build the JSON API still works.
+- Routes served by the server: `/`, `/login`, `/forgot`, `/setup`, `/account`, `/invite/{token}`, `/reset/{token}`, `/projects/...`, `/admin/...`; files under `/static/` (content-hashed, cached for a year).
+- Content-Security-Policy: scripts and styles from the same origin only, no inline code, no third-party requests.
+- German and English (browser language first, then the account setting), light/dark/system, usable from 360 px width.
+
 ## Run
 ```bash
 npm ci
 npm test
-npm start            # http://127.0.0.1:8787/healthz
+npm run build:web    # the editor UI into dist/web
+npm start            # http://127.0.0.1:8787/
+```
+UI development with live reload: start the API with `LEXICAST_BASE_URL=http://localhost:5173 npm start`, then `npm run dev:web` and open http://localhost:5173.
+
+End-to-end tests of the UI (Chromium via Playwright, real server, fresh data directory):
+```bash
+npx playwright install chromium   # once
+npm run build:web && npm run test:e2e
 ```
 Container:
 ```bash
@@ -75,7 +89,10 @@ Settings are environment variables, see `.env.example`. Put a TLS reverse proxy 
 - `src/http/`: JSON API, request helpers
 - `src/signer/`: signer process and its client
 - `src/db/`: SQLite schema and migrations
-- `test/`: end-to-end and database tests
+- `src/web/`: serves the built editor UI
+- `web/`: editor UI source (Svelte, Vite)
+- `test/`: server tests (real HTTP server and signer process)
+- `e2e/`: browser tests of the UI (Playwright)
 
 ## Delivery format
 ```

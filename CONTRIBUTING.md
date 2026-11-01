@@ -16,7 +16,7 @@ This adds a `Signed-off-by: Your Name <you@example.com>` line, certifying that y
 
 ## Development
 
-Node 24 or newer, `npm ci`, `npm run typecheck`, `npm test`. The server runs TypeScript directly (no build step). The server has one runtime dependency (nodemailer, exact version, installed from the lock file). Keep it that way where possible: explain every new dependency in the pull request, pin exact versions and prefer versions that have been public for at least two weeks.
+Node 24 or newer, `npm ci`, `npm run typecheck`, `npm test`, `npm run build:web`, `npm run test:e2e`. The server runs TypeScript directly (no build step); only the editor UI in `web/` is built (Vite). The server has one runtime dependency (nodemailer); Svelte, Vite and Playwright are development dependencies. Keep the list short: explain every new dependency in the pull request, pin exact versions and prefer versions that have been public for at least two weeks. The UI must work under the strict Content-Security-Policy in `src/web/handler.ts`: no inline scripts or styles, no third-party requests.
 
 ## Security
 

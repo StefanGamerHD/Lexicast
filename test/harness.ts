@@ -15,7 +15,7 @@ export const PW = 'correct horse battery staple';
 
 export async function start(env: Record<string, string> = {}, now?: () => number) {
   const { dir, cleanup } = await tmpDir();
-  const config = loadConfig({ LEXICAST_DATA_DIR: dir, ...env });
+  const config = loadConfig({ LEXICAST_DATA_DIR: dir, LEXICAST_WEB_DIR: path.join(import.meta.dirname, 'fixtures', 'web'), ...env });
   const db = openDatabase(':memory:'); migrate(db);
   const auth = createAuth(db, now);
   const signer = startSigner(config.keyDir);

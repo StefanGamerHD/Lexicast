@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export type MailMode = 'off' | 'smtp' | 'file';
 export type SmtpSecurity = 'starttls' | 'tls' | 'none';
@@ -17,6 +18,7 @@ export interface Config {
   mail: MailConfig;
   dataDir: string;
   keyDir: string;
+  webDir: string;
   baseUrl: string;
   authRatePerMinute: number;
   host: string;
@@ -66,6 +68,8 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     },
     dataDir,
     keyDir: path.resolve(env.LEXICAST_KEY_DIR || path.join(dataDir, 'keys')),
+    // built editor UI; defaults to dist/web next to src/
+    webDir: path.resolve(env.LEXICAST_WEB_DIR || fileURLToPath(new URL('../dist/web', import.meta.url))),
     baseUrl,
     authRatePerMinute: int('LEXICAST_AUTH_RATE_PER_MINUTE', env.LEXICAST_AUTH_RATE_PER_MINUTE, 20, 0, 100_000),
     host,

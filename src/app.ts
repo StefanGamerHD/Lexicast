@@ -6,6 +6,7 @@ import type { Config } from './config.ts';
 import { createDeliveryHandler } from './delivery/handler.ts';
 import { createApiHandler } from './http/api.ts';
 import { createProgressHandler } from './public/progress.ts';
+import { createWebHandler } from './web/handler.ts';
 import { createMailer, type Mailer } from './mail/mailer.ts';
 import { createOutbound } from './mail/outbound.ts';
 import { createNotifier } from './notify/service.ts';
@@ -31,6 +32,7 @@ export function createApp({ config, db, auth, signer, mailer = createMailer(conf
   const review = createReview(db, projects, Date.now, notifier);
   const releases = createReleases(db, projects, (b) => signer.sign(b), path.join(config.dataDir, 'releases'), Date.now, notifier);
   const progress = createProgressHandler(db, config.ratePerMinute, config.trustProxyHeader);
+  const web = createWebHandler(config.webDir);
   const api = createApiHandler({ config, auth, signer, projects, keys, review, releases, mailer, outbound });
 
   return http.createServer(async (req, res) => {
@@ -39,6 +41,7 @@ export function createApp({ config, db, auth, signer, mailer = createMailer(conf
     if (await delivery(req, res, url)) return;
     if (await progress(req, res, url)) return;
     if (await api(req, res, url)) return;
+    if (await web(req, res, url)) return;
 
     if (url.pathname === '/healthz' && (req.method === 'GET' || req.method === 'HEAD')) {
       let ok = true;
