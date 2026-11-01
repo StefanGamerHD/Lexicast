@@ -16,7 +16,7 @@ This adds a `Signed-off-by: Your Name <you@example.com>` line, certifying that y
 
 ## Development
 
-Node 24 or newer, `npm ci`, `npm run typecheck`, `npm test`. The server runs TypeScript directly (no build step). Keep dependencies at zero where possible; explain any new one in the pull request.
+Node 24 or newer, `npm ci`, `npm run typecheck`, `npm test`. The server runs TypeScript directly (no build step). The server has one runtime dependency (nodemailer, exact version, installed from the lock file). Keep it that way where possible: explain every new dependency in the pull request, pin exact versions and prefer versions that have been public for at least two weeks.
 
 ## Security
 

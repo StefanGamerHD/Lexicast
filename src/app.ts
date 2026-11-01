@@ -6,15 +6,18 @@ import type { Config } from './config.ts';
 import { createDeliveryHandler } from './delivery/handler.ts';
 import { createApiHandler } from './http/api.ts';
 import { createProgressHandler } from './public/progress.ts';
+import { createMailer, type Mailer } from './mail/mailer.ts';
+import { createOutbound } from './mail/outbound.ts';
+import { createNotifier } from './notify/service.ts';
 import { createKeys } from './projects/keys.ts';
 import { createProjects } from './projects/service.ts';
 import { createReleases } from './releases/service.ts';
 import { createReview } from './review/service.ts';
 import type { Signer } from './signer/client.ts';
 
-export interface AppDeps { config: Config; db: DatabaseSync; auth: Auth; signer: Signer }
+export interface AppDeps { config: Config; db: DatabaseSync; auth: Auth; signer: Signer; mailer?: Mailer }
 
-export function createApp({ config, db, auth, signer }: AppDeps): http.Server {
+export function createApp({ config, db, auth, signer, mailer = createMailer(config.mail) }: AppDeps): http.Server {
   const delivery = createDeliveryHandler({
     root: path.join(config.dataDir, 'releases'),
     ratePerMinute: config.ratePerMinute,
@@ -22,11 +25,13 @@ export function createApp({ config, db, auth, signer }: AppDeps): http.Server {
     trustProxyHeader: config.trustProxyHeader,
   });
   const projects = createProjects(db);
-  const keys = createKeys(db, projects);
-  const review = createReview(db, projects);
-  const releases = createReleases(db, projects, (b) => signer.sign(b), path.join(config.dataDir, 'releases'));
+  const notifier = createNotifier(db);
+  const outbound = createOutbound(mailer, config);
+  const keys = createKeys(db, projects, Date.now, notifier);
+  const review = createReview(db, projects, Date.now, notifier);
+  const releases = createReleases(db, projects, (b) => signer.sign(b), path.join(config.dataDir, 'releases'), Date.now, notifier);
   const progress = createProgressHandler(db, config.ratePerMinute, config.trustProxyHeader);
-  const api = createApiHandler({ config, auth, signer, projects, keys, review, releases });
+  const api = createApiHandler({ config, auth, signer, projects, keys, review, releases, mailer, outbound });
 
   return http.createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://localhost');

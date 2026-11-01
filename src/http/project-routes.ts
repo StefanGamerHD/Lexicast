@@ -1,6 +1,10 @@
+import { normalizeEmail } from '../auth/crypto.ts';
 import type { User } from '../auth/service.ts';
 import type { Keys } from '../projects/keys.ts';
 import type { Projects } from '../projects/service.ts';
+import type { Locale } from '../i18n.ts';
+import type { Mailer } from '../mail/mailer.ts';
+import type { Outbound } from '../mail/outbound.ts';
 import type { Releases } from '../releases/service.ts';
 import type { Review } from '../review/service.ts';
 import { str } from './util.ts';
@@ -14,7 +18,7 @@ const KEY = '([^/]+)';
 const ID = '([0-9]{1,9})';
 
 // Authenticated routes; every handler enforces project roles inside the services.
-export function createProjectRoutes({ projects, keys, review, releases, baseUrl }: { projects: Projects; keys: Keys; review: Review; releases: Releases; baseUrl: string }): Route[] {
+export function createProjectRoutes({ projects, keys, review, releases, mailer, outbound, baseUrl }: { projects: Projects; keys: Keys; review: Review; releases: Releases; mailer: Mailer; outbound: Outbound; baseUrl: string }): Route[] {
   const r = (method: string, pattern: string, body: boolean, handle: Route['handle']): Route => ({ method, pattern: new RegExp(`^${pattern}$`), body, handle });
   const int = (v: string | null): number | undefined => (v !== null && /^\d{1,6}$/.test(v) ? Number(v) : undefined);
   return [
@@ -27,10 +31,21 @@ export function createProjectRoutes({ projects, keys, review, releases, baseUrl 
     r('PATCH', `/projects/${SLUG}`, true, (c) => ({ status: 200, body: { project: projects.updateSettings(c.user, c.params[0]!, c.body) } })),
     r('PUT', `/projects/${SLUG}/languages/${TAG}`, true, (c) => ({ status: 200, body: { project: projects.setLanguage(c.user, c.params[0]!, c.params[1], c.body.fallback) } })),
     r('GET', `/projects/${SLUG}/members`, false, (c) => ({ status: 200, body: { members: projects.listMembers(c.user, c.params[0]!) } })),
-    r('POST', `/projects/${SLUG}/members`, true, (c) => {
-      const out = projects.addMember(c.user, c.params[0]!, c.body.email, c.body.role, c.body.language);
-      // Shown once. Sending it by email arrives with the mail transport.
-      return 'token' in out ? { status: 201, body: { inviteUrl: `${baseUrl}/invite/${out.token}` } } : { status: 200, body: out };
+    r('POST', `/projects/${SLUG}/members`, true, async (c) => {
+      const slug = c.params[0]!;
+      const out = projects.addMember(c.user, slug, c.body.email, c.body.role, c.body.language);
+      if (!('token' in out)) return { status: 200, body: out };
+      // With mail configured the link only travels by email; without mail, or if sending fails, the owner gets it once.
+      const link = `${baseUrl}/invite/${out.token}`;
+      if (!mailer.enabled) return { status: 201, body: { inviteUrl: link } };
+      try {
+        const to = normalizeEmail(c.body.email)!;
+        await outbound.sendInvitation({ to, token: out.token, inviter: c.user.displayName, locale: c.user.uiLocale as Locale, project: projects.access(c.user, slug).project.name, role: String(c.body.role), language: typeof c.body.language === 'string' ? c.body.language : '' });
+        return { status: 201, body: { sent: true } };
+      } catch (e) {
+        console.error('invitation mail failed:', (e as Error).message);
+        return { status: 201, body: { sent: false, mailError: true, inviteUrl: link } };
+      }
     }),
     r('POST', `/projects/${SLUG}/members/remove`, true, (c) => { projects.removeMember(c.user, c.params[0]!, c.body.userId, c.body.role, c.body.language); return { status: 200, body: { ok: true } }; }),
     r('GET', `/projects/${SLUG}/keys`, false, (c) => {

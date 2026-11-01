@@ -1,11 +1,12 @@
-# Lexicast server: no build step, no runtime dependencies (Node runs the TypeScript directly).
+# Lexicast server: no build step (Node runs the TypeScript directly); one runtime dependency (nodemailer), installed from the lock file.
 FROM node:24-alpine
 ENV NODE_ENV=production \
     LEXICAST_HOST=0.0.0.0 \
     LEXICAST_PORT=8787 \
     LEXICAST_DATA_DIR=/data
 WORKDIR /app
-COPY package.json ./
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 COPY src ./src
 RUN addgroup -S lexicast && adduser -S -G lexicast -H lexicast \
     && mkdir /data && chown lexicast:lexicast /data

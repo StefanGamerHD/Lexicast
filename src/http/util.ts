@@ -59,6 +59,12 @@ export function str(v: unknown, field: string, max = 256): string {
   return v;
 }
 
+const BAD_NAME = /[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069\u2028\u2029]/;
+export function displayName(v: unknown, field = 'displayName'): string {
+  if (typeof v !== 'string' || !v.trim() || v.length > 100 || BAD_NAME.test(v)) throw new ApiError(400, 'invalid_field', `${field} must be 1 to 100 characters without control characters`);
+  return v.trim();
+}
+
 export function createLimiter(perMinute: number) {
   const hits = new Map<string, { minute: number; n: number }>();
   return (key: string): boolean => {

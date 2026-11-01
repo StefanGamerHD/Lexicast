@@ -1,7 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { randomBytes } from 'node:crypto';
 import { pseudonymOf as pseudonymOfUser, writeAudit } from '../audit.ts';
-import { ApiError } from '../http/util.ts';
+import { ApiError, displayName } from '../http/util.ts';
 import { DUMMY_HASH, hashPassword, hashToken, newToken, normalizeEmail, passwordProblem, verifyPassword } from './crypto.ts';
 
 export interface User {
@@ -11,11 +11,12 @@ export interface User {
   isInstanceAdmin: boolean;
   uiLocale: string;
   theme: string;
+  notifyEmail: boolean;
 }
 
-interface UserRow { id: number; email: string; display_name: string; password_hash: string; is_instance_admin: number; pseudonym: string; ui_locale: string; theme: string; failed_logins: number; locked_until: string | null; deleted_at: string | null; email_verified_at: string | null }
+interface UserRow { id: number; email: string; display_name: string; password_hash: string; is_instance_admin: number; pseudonym: string; ui_locale: string; theme: string; notify_email: number; failed_logins: number; locked_until: string | null; deleted_at: string | null; email_verified_at: string | null }
 
-const toUser = (r: UserRow): User => ({ id: r.id, email: r.email, displayName: r.display_name, isInstanceAdmin: r.is_instance_admin === 1, uiLocale: r.ui_locale, theme: r.theme });
+const toUser = (r: UserRow): User => ({ id: r.id, email: r.email, displayName: r.display_name, isInstanceAdmin: r.is_instance_admin === 1, uiLocale: r.ui_locale, theme: r.theme, notifyEmail: r.notify_email === 1 });
 
 const MAX_FAILED = 5;
 const LOCK_MS = 15 * 60_000;
@@ -58,7 +59,7 @@ export function createAuth(db: DatabaseSync, now: () => number = Date.now) {
       db.prepare("DELETE FROM instance_settings WHERE key = 'setup_token_hash'").run();
       audit(pseudonym, 'instance.setup', undefined, {});
       db.exec('COMMIT');
-      return { id: Number(r.lastInsertRowid), email, displayName: input.displayName, isInstanceAdmin: true, uiLocale: 'en', theme: 'system' };
+      return { id: Number(r.lastInsertRowid), email, displayName: input.displayName, isInstanceAdmin: true, uiLocale: 'en', theme: 'system', notifyEmail: true };
     } catch (e) {
       db.exec('ROLLBACK');
       throw e;
@@ -133,7 +134,7 @@ export function createAuth(db: DatabaseSync, now: () => number = Date.now) {
       }
       audit(pseudonym, 'invitation.accept');
       db.exec('COMMIT');
-      return { id: Number(r.lastInsertRowid), email: inv.email, displayName, isInstanceAdmin: false, uiLocale: 'en', theme: 'system' };
+      return { id: Number(r.lastInsertRowid), email: inv.email, displayName, isInstanceAdmin: false, uiLocale: 'en', theme: 'system', notifyEmail: true };
     } catch (e) {
       db.exec('ROLLBACK');
       throw e;
@@ -142,7 +143,76 @@ export function createAuth(db: DatabaseSync, now: () => number = Date.now) {
 
   const pseudonymOf = (userId: number): string => pseudonymOfUser(db, userId);
 
-  return { isSetupDone, issueSetupToken, completeSetup, login, userForSession, logout, createInvitation, acceptInvitation };
+  const RESET_MS = 3600_000;
+  const MAX_RESETS_PER_HOUR = 3;
+
+  // Returns null for unknown accounts and when the hourly limit is reached: the caller must answer the same way in every case.
+  function requestPasswordReset(emailIn: unknown): { token: string; email: string; locale: 'en' | 'de' } | null {
+    const email = normalizeEmail(emailIn);
+    if (!email) return null;
+    const u = db.prepare('SELECT id, email, ui_locale, pseudonym FROM users WHERE email = ? AND deleted_at IS NULL AND email_verified_at IS NOT NULL').get(email) as { id: number; email: string; ui_locale: string; pseudonym: string } | undefined;
+    if (!u) return null;
+    const recent = (db.prepare('SELECT COUNT(*) AS n FROM password_resets WHERE user_id = ? AND created_at > ?').get(u.id, iso(now() - RESET_MS)) as { n: number }).n;
+    if (recent >= MAX_RESETS_PER_HOUR) return null;
+    const token = newToken();
+    db.prepare('INSERT INTO password_resets (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)').run(hashToken(token), u.id, iso(), iso(now() + RESET_MS));
+    audit(u.pseudonym, 'auth.reset.request');
+    return { token, email: u.email, locale: u.ui_locale === 'de' ? 'de' : 'en' };
+  }
+
+  async function confirmPasswordReset(token: unknown, password: unknown): Promise<{ email: string; locale: 'en' | 'de' }> {
+    const invalid = new ApiError(400, 'invalid_token', 'The reset link is invalid or expired');
+    if (typeof token !== 'string' || token.length > 100) throw invalid;
+    const r = db.prepare(`SELECT pr.token_hash, pr.used_at, pr.expires_at, u.id, u.email, u.ui_locale, u.pseudonym FROM password_resets pr JOIN users u ON u.id = pr.user_id
+      WHERE pr.token_hash = ? AND u.deleted_at IS NULL`).get(hashToken(token)) as { token_hash: string; used_at: string | null; expires_at: string; id: number; email: string; ui_locale: string; pseudonym: string } | undefined;
+    if (!r || r.used_at || r.expires_at < iso()) throw invalid;
+    const problem = passwordProblem(password, r.email);
+    if (problem) throw new ApiError(400, 'weak_password', problem);
+    const hash = await hashPassword(password as string);
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const fresh = db.prepare('SELECT used_at FROM password_resets WHERE token_hash = ?').get(r.token_hash) as { used_at: string | null };
+      if (fresh.used_at) throw invalid;
+      db.prepare('UPDATE users SET password_hash = ?, failed_logins = 0, locked_until = NULL WHERE id = ?').run(hash, r.id);
+      db.prepare('DELETE FROM sessions WHERE user_id = ?').run(r.id);
+      db.prepare('UPDATE password_resets SET used_at = ? WHERE user_id = ? AND used_at IS NULL').run(iso(), r.id);
+      audit(r.pseudonym, 'auth.reset.confirm');
+      db.exec('COMMIT');
+    } catch (e) { db.exec('ROLLBACK'); throw e; }
+    return { email: r.email, locale: r.ui_locale === 'de' ? 'de' : 'en' };
+  }
+
+  // Signed-in change: needs the current password, signs out every other session.
+  async function changePassword(user: User, currentToken: string | undefined, current: unknown, next: unknown): Promise<void> {
+    const row = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(user.id) as { password_hash: string };
+    if (typeof current !== 'string' || current.length > 256 || !(await verifyPassword(current, row.password_hash))) throw new ApiError(403, 'wrong_password', 'The current password is wrong');
+    const problem = passwordProblem(next, user.email);
+    if (problem) throw new ApiError(400, 'weak_password', problem);
+    if (next === current) throw new ApiError(400, 'weak_password', 'The new password must differ from the current one');
+    const hash = await hashPassword(next as string);
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hash, user.id);
+      db.prepare('DELETE FROM sessions WHERE user_id = ? AND token_hash <> ?').run(user.id, currentToken ? hashToken(currentToken) : '');
+      db.prepare('UPDATE password_resets SET used_at = ? WHERE user_id = ? AND used_at IS NULL').run(iso(), user.id);
+      audit(pseudonymOf(user.id), 'auth.password.change');
+      db.exec('COMMIT');
+    } catch (e) { db.exec('ROLLBACK'); throw e; }
+  }
+
+  function updateProfile(user: User, b: Record<string, unknown>): User {
+    const name = 'displayName' in b ? displayName(b.displayName) : user.displayName;
+    const locale = 'uiLocale' in b ? b.uiLocale : user.uiLocale;
+    const theme = 'theme' in b ? b.theme : user.theme;
+    const notify = 'notifyEmail' in b ? b.notifyEmail : user.notifyEmail;
+    if (locale !== 'en' && locale !== 'de') throw new ApiError(400, 'invalid_field', 'uiLocale must be en or de');
+    if (theme !== 'light' && theme !== 'dark' && theme !== 'system') throw new ApiError(400, 'invalid_field', 'theme must be light, dark or system');
+    if (typeof notify !== 'boolean') throw new ApiError(400, 'invalid_field', 'notifyEmail must be true or false');
+    db.prepare('UPDATE users SET display_name = ?, ui_locale = ?, theme = ?, notify_email = ? WHERE id = ?').run(name, locale, theme, notify ? 1 : 0, user.id);
+    return { ...user, displayName: name, uiLocale: locale, theme, notifyEmail: notify };
+  }
+
+  return { isSetupDone, issueSetupToken, completeSetup, login, userForSession, logout, createInvitation, acceptInvitation, requestPasswordReset, confirmPasswordReset, changePassword, updateProfile };
 }
 export type Auth = ReturnType<typeof createAuth>;
 export { newToken };

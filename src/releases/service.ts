@@ -3,6 +3,7 @@ import { rm } from 'node:fs/promises';
 import path from 'node:path';
 import type { User } from '../auth/service.ts';
 import { ApiError } from '../http/util.ts';
+import type { Notifier } from '../notify/service.ts';
 import type { Projects } from '../projects/service.ts';
 import { buildRelease, diffTexts, readLive, resolveTexts, rollbackRelease, type BuildInput, type SignFn, type TextDiff, type Texts } from '../release/build.ts';
 
@@ -16,7 +17,7 @@ interface ReleaseRow {
   failure_reason: string | null; created_by_name: string | null;
 }
 
-export function createReleases(db: DatabaseSync, projects: Projects, sign: SignFn, releasesDir: string, now: () => number = Date.now) {
+export function createReleases(db: DatabaseSync, projects: Projects, sign: SignFn, releasesDir: string, now: () => number = Date.now, notifier?: Notifier) {
   const iso = () => new Date(now()).toISOString();
   const running = new Set<number>();
 
@@ -118,6 +119,7 @@ export function createReleases(db: DatabaseSync, projects: Projects, sign: SignF
       await buildRelease({ ...fresh.input, releasesDir, sign, releaseNumber: number, now });
       db.prepare("UPDATE releases SET state = 'published', change_summary = ? WHERE project_id = ? AND number = ?").run(JSON.stringify(p.summary), p.project.id, number);
       projects.audit(user.id, 'release.create', slug, String(number), { solo: p.summary.soloApprovals });
+      notifier?.enqueue(notifier.staff(p.project.id), p.project.id, 'release_published', { number }, user.id);
       return { release: number, summary: p.summary };
     } catch (e) {
       if (e instanceof ApiError && e.code === 'no_changes') {
@@ -142,6 +144,7 @@ export function createReleases(db: DatabaseSync, projects: Projects, sign: SignF
       await rollbackRelease({ releasesDir, project: slug, toRelease, sign, releaseNumber: number, now });
       db.prepare("UPDATE releases SET state = 'published', change_summary = ? WHERE project_id = ? AND number = ?").run(JSON.stringify({ rolledBackTo: toRelease }), project.id, number);
       projects.audit(user.id, 'release.rollback', slug, String(number), { to: toRelease });
+      notifier?.enqueue(notifier.staff(project.id), project.id, 'release_published', { number }, user.id);
       return { release: number, rolledBackTo: toRelease };
     } catch (e) {
       return fail(project.id, slug, number, user.id, e);

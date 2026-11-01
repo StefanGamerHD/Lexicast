@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { User } from '../auth/service.ts';
 import { ApiError } from '../http/util.ts';
+import type { Notifier } from '../notify/service.ts';
 import type { Projects, Roles } from '../projects/service.ts';
 import { validateText } from '../release/validate.ts';
 import { softWarnings, type Warning } from './warnings.ts';
@@ -18,7 +19,7 @@ export interface SuggestionView {
   sourceText: string; currentText: string | null; sourceChanged: boolean; warnings: Warning[]; rejectReason: string | null;
 }
 
-export function createReview(db: DatabaseSync, projects: Projects, now: () => number = Date.now) {
+export function createReview(db: DatabaseSync, projects: Projects, now: () => number = Date.now, notifier?: Notifier) {
   const iso = () => new Date(now()).toISOString();
   const mayTranslate = (r: Roles, lang: string) => r.owner || r.translator.has(lang) || r.reviewer.has(lang);
   const mayReview = (r: Roles, lang: string) => r.owner || r.reviewer.has(lang);
@@ -51,6 +52,7 @@ export function createReview(db: DatabaseSync, projects: Projects, now: () => nu
       const r = db.prepare('INSERT INTO suggestions (key_id, language, text, author_id, created_at, source_snapshot) VALUES (?, ?, ?, ?, ?, ?)').run(key.id, language, text, user.id, iso(), key.source_text);
       projects.audit(user.id, 'suggestion.create', slug, `${key.name}:${language}`);
       db.exec('COMMIT');
+      notifier?.enqueue(notifier.reviewers(project.id, language), project.id, 'suggestion_open', { language }, user.id);
       return { id: Number(r.lastInsertRowid), warnings: softWarnings(text, key.source_text) };
     } catch (e) { db.exec('ROLLBACK'); throw e; }
   }
@@ -129,13 +131,14 @@ export function createReview(db: DatabaseSync, projects: Projects, now: () => nu
     if (!reason || reason.length > 500) throw new ApiError(400, 'invalid_field', 'A reason of 1 to 500 characters is required');
     db.exec('BEGIN IMMEDIATE');
     try {
-      const { roles, s } = loadForReview(user, slug, id);
+      const { project, roles, s } = loadForReview(user, slug, id);
       if (!mayReview(roles, s.language)) throw new ApiError(403, 'forbidden', 'You do not review this language');
       if (s.state !== 'open') throw new ApiError(409, 'not_open', `Suggestion is ${s.state}`);
       if (s.author_id === user.id) throw new ApiError(403, 'self_review', 'Withdraw your own suggestion instead of rejecting it');
       db.prepare("UPDATE suggestions SET state = 'rejected', reviewer_id = ?, reject_reason = ?, reviewed_at = ? WHERE id = ?").run(user.id, reason, iso(), s.id);
       projects.audit(user.id, 'suggestion.reject', slug, `${s.key_name}:${s.language}`);
       db.exec('COMMIT');
+      notifier?.enqueue([s.author_id], project.id, 'suggestion_rejected', { count: 1 });
       return { rejected: true };
     } catch (e) { db.exec('ROLLBACK'); throw e; }
   }

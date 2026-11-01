@@ -2,7 +2,7 @@
 
 Self-hostable server for translations that are reviewed by a second person, signed, and delivered live to running apps.
 
-Status: early. Exists: signed releases with rollback, static delivery, database schema, instance setup, sign-in and invitations (JSON API), signing key in a separate signer process. Projects, members with roles per language, keys and JSON import (with preview) exist as API. Suggestions and review (four-eyes, solo mode as logged exception) exist as API. Releases (preview, build, signed publish, rollback) exist as API. Public progress page exists (de/en). Not built yet: editor, mail transport. Not ready for production use.
+Status: early. Exists: signed releases with rollback, static delivery, database schema, instance setup, sign-in and invitations (JSON API), signing key in a separate signer process. Projects, members with roles per language, keys and JSON import (with preview) exist as API. Suggestions and review (four-eyes, solo mode as logged exception) exist as API. Releases (preview, build, signed publish, rollback) exist as API. Public progress page exists (de/en). Mail (invitations, password reset, digest notifications) exists. Not built yet: the editor UI. Not ready for production use.
 
 ## What it does (planned for v1)
 - Translators suggest texts in a web editor, a second person approves, the owner presses "release".
@@ -45,6 +45,13 @@ The progress page needs no JavaScript, follows the browser language (German or E
 An approved text becomes the current translation but is not live until a release is built. Releases contain active keys and translations that are not outdated; deprecated keys disappear with the next release. A rollback is a new release with a higher number, so clients accept it. A suggestion written against an older source text is flagged and cannot be approved.
 
 Non-members get 404 for project URLs; the instance admin has no implicit access to projects.
+
+## Mail
+Set `LEXICAST_MAIL=smtp` with host, port, security (`starttls` by default, `tls`, or `none` for localhost only), user and password (prefer `LEXICAST_SMTP_PASSWORD_FILE`). Mails are plain text, in the recipient's language (German or English).
+- **Invitations** are sent by mail; with mail configured the link is *not* returned by the API. Without mail, or if sending fails, the inviter gets the link once.
+- **Password reset** (`POST /auth/password-reset/request`, `.../confirm`): the same answer for every address, link valid 60 minutes and usable once, at most 3 per hour and account, ends all sessions. Not available without mail.
+- **Notifications** (new suggestions, rejected suggestions, published releases, outdated translations) are collected and sent as one digest mail per person every `LEXICAST_DIGEST_MINUTES` (default 15). Everyone can switch them off in their account (`PATCH /me` with `notifyEmail`). Failed mails stay queued and are retried; entries older than 7 days are dropped.
+- Account: `PATCH /me` (name, language, theme, notifications), `POST /me/password`.
 
 ## Signing key
 The private key is created on first use and stored read-only (mode 0400) in `LEXICAST_KEY_DIR`. It is loaded only by a separate signer process; the web process asks it to sign and never holds the key. This is process separation, not separate users: someone who can run code as the same OS user can still read the file. Back it up offline; losing it means every app must ship a new public key.

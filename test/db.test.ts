@@ -21,9 +21,9 @@ const addSuggestion = (db: DatabaseSync, over: Record<string, string | number | 
 
 test('migrations apply once and are idempotent', () => {
   const db = openDatabase(':memory:');
-  assert.equal(migrate(db), 2);
-  assert.equal(migrate(db), 2);
-  assert.equal((db.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get() as { n: number }).n, 2);
+  assert.equal(migrate(db), 3);
+  assert.equal(migrate(db), 3);
+  assert.equal((db.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get() as { n: number }).n, 3);
 });
 
 test('four-eyes rule is enforced by the database', () => {
