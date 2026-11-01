@@ -2,14 +2,18 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createHash } from 'node:crypto';
 import type { Auth, User } from '../auth/service.ts';
 import type { Config } from '../config.ts';
+import type { Keys } from '../projects/keys.ts';
+import type { Projects } from '../projects/service.ts';
 import type { Signer } from '../signer/client.ts';
+import { createProjectRoutes } from './project-routes.ts';
 import { fingerprint } from '../signer/client.ts';
 import { ApiError, createLimiter, parseCookies, readJson, sendJson, sessionCookie, str } from './util.ts';
 
-export interface ApiDeps { config: Config; auth: Auth; signer: Signer }
+export interface ApiDeps { config: Config; auth: Auth; signer: Signer; projects: Projects; keys: Keys }
 
 // JSON API under /api/v1. Cookie-authenticated, so every state-changing request must come from our own origin.
-export function createApiHandler({ config, auth, signer }: ApiDeps) {
+export function createApiHandler({ config, auth, signer, projects, keys }: ApiDeps) {
+  const routes = createProjectRoutes({ projects, keys, baseUrl: config.baseUrl });
   const origin = new URL(config.baseUrl).origin;
   const secure = config.baseUrl.startsWith('https://');
   const cookieName = secure ? '__Host-lexicast' : 'lexicast_session';
@@ -74,8 +78,18 @@ export function createApiHandler({ config, auth, signer }: ApiDeps) {
           const login = await auth.login(user.email, b.password);
           return sendJson(res, 201, { user }, { 'Set-Cookie': sessionCookie(cookieName, login.token, cookieOpts) }), true;
         }
-        default:
+        default: {
+          const path = url.pathname.slice('/api/v1'.length);
+          for (const r of routes) {
+            const m = r.pattern.exec(path);
+            if (r.method !== req.method || !m) continue;
+            const user = requireUser(req);
+            const body = r.body ? await readJson(req, r.bodyLimit) : {};
+            const out = r.handle({ user, params: m.slice(1).map((x) => decodeURIComponent(x)), body, query: url.searchParams });
+            return sendJson(res, out.status, out.body), true;
+          }
           throw new ApiError(404, 'not_found', 'Unknown endpoint');
+        }
       }
     } catch (e) {
       if (e instanceof ApiError) {

@@ -2,7 +2,7 @@
 
 Self-hostable server for translations that are reviewed by a second person, signed, and delivered live to running apps.
 
-Status: early. Exists: signed releases with rollback, static delivery, database schema, instance setup, sign-in and invitations (JSON API), signing key in a separate signer process. Not built yet: editor, projects and keys API, review workflow, mail transport. Not ready for production use.
+Status: early. Exists: signed releases with rollback, static delivery, database schema, instance setup, sign-in and invitations (JSON API), signing key in a separate signer process. Projects, members with roles per language, keys and JSON import (with preview) exist as API. Not built yet: editor, suggestions and review workflow, release from the database, mail transport. Not ready for production use.
 
 ## What it does (planned for v1)
 - Translators suggest texts in a web editor, a second person approves, the owner presses "release".
@@ -18,6 +18,19 @@ curl -X POST http://127.0.0.1:8787/api/v1/setup \
   -d '{"setupToken":"<token from the log>","email":"you@example.com","displayName":"You","password":"at least 12 characters"}'
 ```
 The response contains the public signing key and its fingerprint: embed the public key in your apps. Setup works once; the token is deleted afterwards.
+
+## API overview (`/api/v1`, cookie session, JSON)
+| Endpoint | Who |
+|---|---|
+| `GET /instance`, `POST /setup`, `POST /auth/login`, `POST /auth/logout`, `GET /me` | see above |
+| `POST /invitations`, `POST /invitations/accept` | instance admin invites; anyone with the link accepts |
+| `GET /projects`, `POST /projects` | members see their projects; only the instance admin creates (becomes owner) |
+| `GET /projects/{slug}`, `PUT /projects/{slug}/languages/{tag}` | members; owners change languages and fallback chains |
+| `GET/POST /projects/{slug}/members`, `POST .../members/remove` | owners (existing accounts are added, unknown emails get an invitation link) |
+| `GET/POST /projects/{slug}/keys`, `PATCH .../keys/{name}` | members read (translators and reviewers see their languages only); owners write |
+| `POST /projects/{slug}/keys/import` | owners; `apply:false` previews, `apply:true` writes, `deprecateMissing:true` marks absent keys deprecated |
+
+Non-members get 404 for project URLs; the instance admin has no implicit access to projects.
 
 ## Signing key
 The private key is created on first use and stored read-only (mode 0400) in `LEXICAST_KEY_DIR`. It is loaded only by a separate signer process; the web process asks it to sign and never holds the key. This is process separation, not separate users: someone who can run code as the same OS user can still read the file. Back it up offline; losing it means every app must ship a new public key.

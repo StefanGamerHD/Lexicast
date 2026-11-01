@@ -1,5 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { randomBytes } from 'node:crypto';
+import { pseudonymOf as pseudonymOfUser, writeAudit } from '../audit.ts';
 import { ApiError } from '../http/util.ts';
 import { DUMMY_HASH, hashPassword, hashToken, newToken, normalizeEmail, passwordProblem, verifyPassword } from './crypto.ts';
 
@@ -26,9 +27,8 @@ export function createAuth(db: DatabaseSync, now: () => number = Date.now) {
   const setting = (k: string): string | undefined => (db.prepare('SELECT value FROM instance_settings WHERE key = ?').get(k) as { value: string } | undefined)?.value;
   const putSetting = (k: string, v: string) => db.prepare('INSERT INTO instance_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(k, v);
 
-  function audit(actorPseudonym: string, action: string, target?: string, details: object = {}) {
-    db.prepare('INSERT INTO audit_log (at, actor_pseudonym, action, target, details) VALUES (?, ?, ?, ?, ?)').run(iso(), actorPseudonym, action, target ?? null, JSON.stringify(details));
-  }
+  const audit = (actorPseudonym: string, action: string, target?: string, details: object = {}) =>
+    writeAudit(db, now, actorPseudonym, action, { ...(target !== undefined ? { target } : {}), details });
 
   const isSetupDone = (): boolean => setting('setup_done') === '1';
 
@@ -113,7 +113,7 @@ export function createAuth(db: DatabaseSync, now: () => number = Date.now) {
   }
 
   async function acceptInvitation(token: string, displayName: string, password: unknown): Promise<User> {
-    const inv = db.prepare('SELECT * FROM invitations WHERE token_hash = ?').get(hashToken(token)) as { id: number; email: string; expires_at: string; used_at: string | null } | undefined;
+    const inv = db.prepare('SELECT * FROM invitations WHERE token_hash = ?').get(hashToken(token)) as { id: number; project_id: number | null; role: string; language: string; email: string; expires_at: string; used_at: string | null } | undefined;
     if (!inv || inv.used_at || inv.expires_at < iso()) throw new ApiError(400, 'invalid_invitation', 'Invitation is invalid or expired');
     const problem = passwordProblem(password, inv.email);
     if (problem) throw new ApiError(400, 'weak_password', problem);
@@ -128,6 +128,9 @@ export function createAuth(db: DatabaseSync, now: () => number = Date.now) {
       const r = db.prepare(`INSERT INTO users (email, display_name, password_hash, email_verified_at, pseudonym, created_at) VALUES (?, ?, ?, ?, ?, ?)`)
         .run(inv.email, displayName, passwordHash, iso(), pseudonym, iso());
       db.prepare('UPDATE invitations SET used_at = ? WHERE id = ?').run(iso(), inv.id);
+      if (inv.project_id !== null) {
+        db.prepare('INSERT OR IGNORE INTO members (project_id, user_id, role, language) VALUES (?, ?, ?, ?)').run(inv.project_id, Number(r.lastInsertRowid), inv.role, inv.role === 'owner' ? '' : inv.language);
+      }
       audit(pseudonym, 'invitation.accept');
       db.exec('COMMIT');
       return { id: Number(r.lastInsertRowid), email: inv.email, displayName, isInstanceAdmin: false, uiLocale: 'en', theme: 'system' };
@@ -137,7 +140,7 @@ export function createAuth(db: DatabaseSync, now: () => number = Date.now) {
     }
   }
 
-  const pseudonymOf = (userId: number): string => (db.prepare('SELECT pseudonym FROM users WHERE id = ?').get(userId) as { pseudonym: string }).pseudonym;
+  const pseudonymOf = (userId: number): string => pseudonymOfUser(db, userId);
 
   return { isSetupDone, issueSetupToken, completeSetup, login, userForSession, logout, createInvitation, acceptInvitation };
 }
