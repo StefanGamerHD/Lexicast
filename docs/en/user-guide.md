@@ -35,11 +35,15 @@ curl -X POST https://translate.example.com/api/v1/projects \
 The start page lists your projects. The project page shows each language with a progress bar, how many texts are in review or outdated, the live release, and buttons to translate or review.
 
 ## Keys and source texts
-A key is one text of your app, e.g. `cart.items` with the source text `{count} items in your cart`. Owners manage keys through the API (screen in UI part 3):
-- **Import** a JSON file, flat (`{"cart.title": "Your cart"}`) or nested (`{"cart": {"title": "Your cart"}}`). First send it with `apply: false` to see what would be added, changed, reactivated or removed; then with `apply: true`. The import is all-or-nothing: one invalid text rejects the whole file. `deprecateMissing: true` marks keys that are not in the file as deprecated.
-- **Edit** a key: source text, context note for translators, maximum length, state (`active` or `deprecated`).
-- **Changing a source text** marks all its translations as **outdated**. Outdated translations are not released until someone translates them again.
-- Deprecated keys are hidden from translators and disappear from the next release.
+A key is one text of your app, e.g. `cart.items` with the source text `{count} items in your cart`. Owners manage keys under **Keys** in the project's navigation.
+- **Key list:** search, filter (active, deprecated, all), and per key how many languages are translated and how many translations are outdated.
+- **New key:** name (letters, digits, dot, dash, underscore; cannot be changed later), source text, optional note for translators and maximum length. The text rules are checked while you type.
+- **Import JSON:** upload a file or paste JSON, flat (`{"cart.title": "Your cart"}`) or nested (`{"cart": {"title": "Your cart"}}`). Invalid JSON is reported with line and column. **Show preview** lists what would be added, changed, made active again, left unchanged, and which existing keys are not in the file; nothing is saved yet. **Apply import** saves it. The import is all-or-nothing: one invalid text rejects the whole file and the page shows which keys failed. The option "Mark keys that are not in this file as deprecated" deprecates them; without it they stay as they are. Changing the text or the option asks for a new preview.
+- **Key page** (click a key): edit source text, note, maximum length and state (`active` or `deprecated`), and see each language's translation with its state and open suggestions, with a link into the editor.
+- **Changing a source text** marks all its translations as **outdated**; the key page warns how many before you save. Outdated translations are not released until someone translates them again.
+- Deprecated keys are hidden from translators and disappear from the next release. Keys are never deleted.
+
+Scripts can do the same through the API (`POST .../keys`, `PATCH .../keys/{name}`, `POST .../keys/import` with `apply: false` for the preview and `apply: true` to save); see the [API reference](api.md#keys).
 
 ## Placeholders and text rules
 Placeholders look like `{name}`: letters, digits and underscore in curly braces. A translation must contain exactly the same placeholders as the source text. Plurals are separate keys (`items.one`, `items.other`); ICU message format is planned for later.
@@ -74,11 +78,13 @@ Owners and reviewers see **Open review queue** on the project page.
 **Four-eyes rule:** nobody can approve their own suggestion. For projects with only one person, owners can switch on **solo mode**; then owners may approve their own texts, each such approval is logged as an exception and counted in the release preview. The database also enforces the rule.
 
 ## Releases
-Owners publish releases (API now, screen in UI part 3):
-1. **Preview** (`GET .../releases/preview`): next release number, changes per language (added, changed, removed), open suggestions, solo-mode approvals, outdated texts left out.
-2. **Create** (`POST .../releases` with an optional note): Lexicast resolves fallbacks, writes one JSON file per language, signs the manifest and switches it live. Only one release per project can be built at a time. A failed build records the reason and leaves the live release untouched.
-3. **History** (`GET .../releases`): all releases with notes, change summaries, failures and rollbacks.
-4. **Rollback** (`POST .../releases/{n}/rollback`): publishes the content of an older release as a **new** release with a higher number, so apps accept it. History is never changed.
+**Releases** in the project's navigation shows the live release and the history to every member. Owners also see the next release:
+1. **Preview:** the next release number and, per language, how many keys are new, changed or removed (open the language to see the key names). Below: suggestions still waiting for review (not included), outdated translations left out, and approvals made in solo mode.
+2. **Publish:** add an optional note (shown in the history next to the generated list of changes) and press **Publish release {n}**. Lexicast resolves fallbacks, writes one JSON file per language, signs the manifest and switches it live. The button is disabled when nothing changed since the live release. Only one release per project can be built at a time; a failed build records the reason in the history and leaves the live release untouched.
+3. **History:** every release with date, author, note, change counts per language, failures, and marks for "Live", "Failed" and "Rolled back".
+4. **Restore (rollback):** on an older published release, **Restore release {n}…** asks for confirmation and an optional note, then publishes that content as a **new** release with a higher number, so apps accept it. The releases in between are marked "Rolled back". History is never changed.
+
+API: `GET .../releases/preview`, `POST .../releases`, `POST .../releases/{n}/rollback`, `GET .../releases`; see the [API reference](api.md#releases).
 
 Approved texts are not live until a release is built. A release contains only active keys and translations that are not outdated.
 

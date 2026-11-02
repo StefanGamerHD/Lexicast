@@ -6,6 +6,7 @@
   import { formatDate, languageName, loadProject, loadSuggestions, reviewLanguages, type ProjectInfo, type Suggestion } from '../lib/projects.ts';
   import { navigate, route } from '../lib/router.svelte.ts';
   import Notice from '../components/Notice.svelte';
+  import ProjectNav from '../components/ProjectNav.svelte';
   import NotFound from './NotFound.svelte';
 
   let { slug }: { slug: string } = $props();
@@ -72,7 +73,7 @@
   <NotFound />
 {:else}
   <main id="main" class="wide">
-    <p class="eyebrow"><a href="/">{t('nav.projects')}</a> / {#if info}<a href="/projects/{slug}">{info.project.name}</a>{/if}</p>
+    <ProjectNav {slug} {info} current="review" />
     <h1>{t('review.title')}</h1>
     {#if error}<Notice><p>{error}</p></Notice>{/if}
     {#if message}<Notice kind="ok"><p>{message}</p></Notice>{/if}

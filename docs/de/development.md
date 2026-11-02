@@ -35,7 +35,7 @@ src/
   notify/      Benachrichtigungs-Warteschlange und Sammel-Mail
   web/         liefert die gebaute Oberfläche mit strenger CSP aus
 test/          Server-Tests (harness.ts startet eine echte App)
-web/src/       Oberfläche: App.svelte (Routen), lib/ (API, Router, Übersetzungen, Sitzung, Projekte, Textprüfung, Diff), components/, pages/
+web/src/       Oberfläche: App.svelte (Routen), lib/ (API, Router, Übersetzungen, Sitzung, Projekte, Textprüfung, Diff, JSON-Fehlerstelle), components/, pages/
 e2e/           Browser-Tests
 docs/          diese Dokumentation (en, de)
 ```
