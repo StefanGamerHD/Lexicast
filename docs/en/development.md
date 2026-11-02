@@ -35,7 +35,7 @@ src/
   notify/      notification queue and digest
   web/         serves the built UI with a strict CSP
 test/          server tests (harness.ts starts a real app)
-web/src/       UI: App.svelte (routes), lib/ (api, router, i18n, session, projects, text checks, diff), components/, pages/
+web/src/       UI: App.svelte (routes), lib/ (api, router, i18n, session, projects, text checks, diff, JSON error location), components/, pages/
 e2e/           browser tests
 docs/          this documentation (en, de)
 ```

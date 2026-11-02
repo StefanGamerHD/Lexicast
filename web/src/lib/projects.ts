@@ -22,13 +22,26 @@ export interface Suggestion {
 // The newest own suggestion for a key in the editor.
 export interface Mine { id: number; text: string; state: string; rejectReason: string | null }
 
+export interface LanguageChanges { added: number; changed: number; removed: number }
+export interface ReleasePreview {
+  liveRelease: number | null; nextRelease: number; hasChanges: boolean; openSuggestions: number;
+  summary: { languages: Record<string, LanguageChanges>; soloApprovals: number; outdatedExcluded: number };
+  changes: Record<string, { added: string[]; changed: string[]; removed: string[] }>;
+}
+export interface Release {
+  number: number; state: 'building' | 'published' | 'failed'; createdAt: string; createdBy: string | null; note: string;
+  rolledBackTo: number | null; failureReason: string | null;
+  summary: { languages?: Record<string, LanguageChanges>; soloApprovals?: number; outdatedExcluded?: number; rolledBackTo?: number } | null;
+}
+export interface ImportResult { applied: boolean; added: string[]; changed: string[]; reactivated: string[]; unchanged: number; removed: string[]; removedAreDeprecated: boolean }
+
 export const loadProject = (slug: string) => api<ProjectInfo>('GET', `/projects/${slug}`);
 
 // The server pages keys (max 500 per request); the editor filters on the client, so it loads them all.
-export async function loadAllKeys(slug: string): Promise<KeyItem[]> {
+export async function loadAllKeys(slug: string, state: '' | 'active' | 'deprecated' = 'active'): Promise<KeyItem[]> {
   const out: KeyItem[] = [];
   for (;;) {
-    const r = await api<{ total: number; keys: KeyItem[] }>('GET', `/projects/${slug}/keys?state=active&limit=500&offset=${out.length}`);
+    const r = await api<{ total: number; keys: KeyItem[] }>('GET', `/projects/${slug}/keys?${state ? `state=${state}&` : ''}limit=500&offset=${out.length}`);
     out.push(...r.keys);
     if (!r.keys.length || out.length >= r.total) return out;
   }

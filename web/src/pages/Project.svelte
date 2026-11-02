@@ -4,6 +4,7 @@
   import { t } from '../lib/i18n.svelte.ts';
   import { canTranslate, formatDate, loadProject, reviewLanguages, type ProjectInfo } from '../lib/projects.ts';
   import Notice from '../components/Notice.svelte';
+  import ProjectNav from '../components/ProjectNav.svelte';
   import ProgressRow from '../components/ProgressRow.svelte';
   import RoleList from '../components/RoleList.svelte';
   import NotFound from './NotFound.svelte';
@@ -28,7 +29,7 @@
   <NotFound />
 {:else}
   <main id="main">
-    <p class="eyebrow"><a href="/">{t('nav.projects')}</a></p>
+    <ProjectNav {slug} {info} current="overview" />
     {#if error}
       <Notice><p>{error}</p></Notice>
     {:else if !info}
@@ -51,7 +52,7 @@
 
       <h2>{t('project.languages')}</h2>
       {#if info.progress.languages.every((l) => l.total === 0)}
-        <p>{t('project.noKeys')}</p>
+        <p>{t('project.noKeys')}{#if info.roles.owner} <a href="/projects/{p.slug}/import">{t('project.importNow')}</a>{/if}</p>
       {/if}
       <ul class="progress-list">
         {#each info.progress.languages as lang (lang.tag)}

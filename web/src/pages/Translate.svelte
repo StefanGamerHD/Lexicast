@@ -6,6 +6,7 @@
   import { navigate, route } from '../lib/router.svelte.ts';
   import KeyEditor from '../components/KeyEditor.svelte';
   import Notice from '../components/Notice.svelte';
+  import ProjectNav from '../components/ProjectNav.svelte';
   import NotFound from './NotFound.svelte';
 
   let { slug, lang }: { slug: string; lang: string } = $props();
@@ -71,7 +72,7 @@
   <NotFound />
 {:else}
   <main id="main" class="wide">
-    <p class="eyebrow"><a href="/">{t('nav.projects')}</a> / {#if info}<a href="/projects/{slug}">{info.project.name}</a>{/if}</p>
+    <ProjectNav {slug} {info} current="other" />
     <h1>{t('translate.title', { lang: languageName(lang) })} <span class="tag">{lang}</span></h1>
     {#if error}
       <Notice><p>{error}</p></Notice>

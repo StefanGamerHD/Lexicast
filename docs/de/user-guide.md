@@ -35,11 +35,15 @@ curl -X POST https://translate.example.com/api/v1/projects \
 Die Startseite listet deine Projekte. Die Projektseite zeigt jede Sprache mit einem Fortschrittsbalken, wie viele Texte in Prüfung oder veraltet sind, das aktuelle Release und Knöpfe zum Übersetzen oder Prüfen.
 
 ## Keys und Ausgangstexte
-Ein Key ist ein Text deiner App, z. B. `cart.items` mit dem Ausgangstext `{count} items in your cart`. Owner verwalten Keys über die API (Oberfläche mit UI-Teil 3):
-- **Import** einer JSON-Datei, flach (`{"cart.title": "Your cart"}`) oder verschachtelt (`{"cart": {"title": "Your cart"}}`). Schicke sie zuerst mit `apply: false`, um zu sehen, was hinzukäme, sich änderte, wieder aktiv würde oder fehlt; dann mit `apply: true`. Der Import gilt ganz oder gar nicht: Ein ungültiger Text lehnt die ganze Datei ab. `deprecateMissing: true` markiert Keys, die nicht in der Datei stehen, als veraltet (deprecated).
-- **Bearbeiten** eines Keys: Ausgangstext, Hinweis für Übersetzer, Maximallänge, Zustand (`active` oder `deprecated`).
-- **Ändert sich ein Ausgangstext**, werden alle seine Übersetzungen als **veraltet** markiert. Veraltete Übersetzungen kommen erst wieder ins Release, wenn jemand sie neu übersetzt.
-- Deprecated Keys sind für Übersetzer ausgeblendet und verschwinden mit dem nächsten Release.
+Ein Key ist ein Text deiner App, z. B. `cart.items` mit dem Ausgangstext `{count} items in your cart`. Owner verwalten Keys unter **Keys** in der Projekt-Navigation.
+- **Key-Liste:** Suche, Filter (aktiv, deprecated, alle) und pro Key, wie viele Sprachen übersetzt und wie viele Übersetzungen veraltet sind.
+- **Neuer Key:** Name (Buchstaben, Ziffern, Punkt, Bindestrich, Unterstrich; lässt sich später nicht ändern), Ausgangstext, optional ein Hinweis für Übersetzer und eine Maximallänge. Die Textregeln werden beim Tippen geprüft.
+- **JSON importieren:** Datei hochladen oder JSON einfügen, flach (`{"cart.title": "Your cart"}`) oder verschachtelt (`{"cart": {"title": "Your cart"}}`). Ungültiges JSON wird mit Zeile und Spalte gemeldet. **Vorschau anzeigen** listet, was neu hinzukäme, sich änderte, wieder aktiv würde, gleich bliebe und welche vorhandenen Keys nicht in der Datei stehen; gespeichert wird noch nichts. **Import übernehmen** speichert. Der Import gilt ganz oder gar nicht: Ein ungültiger Text lehnt die ganze Datei ab, und die Seite zeigt, welche Keys betroffen sind. Mit der Option „Keys, die nicht in dieser Datei stehen, als deprecated markieren“ werden sie deprecated; ohne sie bleiben sie, wie sie sind. Änderst du Text oder Option, brauchst du eine neue Vorschau.
+- **Key-Seite** (Key anklicken): Ausgangstext, Hinweis, Maximallänge und Zustand (`active` oder `deprecated`) bearbeiten und die Übersetzung jeder Sprache mit Zustand und offenen Vorschlägen sehen, mit Link in den Editor.
+- **Ändert sich ein Ausgangstext**, werden alle seine Übersetzungen als **veraltet** markiert; die Key-Seite sagt vor dem Speichern, wie viele. Veraltete Übersetzungen kommen erst wieder ins Release, wenn jemand sie neu übersetzt.
+- Deprecated Keys sind für Übersetzer ausgeblendet und verschwinden mit dem nächsten Release. Keys werden nie gelöscht.
+
+Skripte können dasselbe über die API (`POST .../keys`, `PATCH .../keys/{name}`, `POST .../keys/import` mit `apply: false` für die Vorschau und `apply: true` zum Speichern); siehe [API-Referenz](api.md#keys).
 
 ## Platzhalter und Textregeln
 Platzhalter sehen so aus: `{name}`, also Buchstaben, Ziffern und Unterstrich in geschweiften Klammern. Eine Übersetzung muss genau dieselben Platzhalter enthalten wie der Ausgangstext. Pluralformen sind eigene Keys (`items.one`, `items.other`); das ICU-Nachrichtenformat ist für später geplant.
@@ -74,11 +78,13 @@ Owner und Prüfer sehen auf der Projektseite **Prüf-Warteschlange öffnen**.
 **Vier-Augen-Prinzip:** Niemand kann den eigenen Vorschlag freigeben. Für Projekte mit nur einer Person können Owner den **Solo-Modus** einschalten; dann dürfen Owner eigene Texte freigeben, jede solche Freigabe wird als Ausnahme protokolliert und in der Release-Vorschau gezählt. Auch die Datenbank erzwingt die Regel.
 
 ## Releases
-Owner veröffentlichen Releases (jetzt über die API, Oberfläche mit UI-Teil 3):
-1. **Vorschau** (`GET .../releases/preview`): nächste Release-Nummer, Änderungen pro Sprache (neu, geändert, entfernt), offene Vorschläge, Solo-Freigaben, ausgelassene veraltete Texte.
-2. **Erstellen** (`POST .../releases` mit optionaler Notiz): Lexicast löst die Fallbacks auf, schreibt eine JSON-Datei pro Sprache, signiert das Manifest und schaltet es live. Pro Projekt kann nur ein Release gleichzeitig gebaut werden. Ein fehlgeschlagener Build hält den Grund fest und lässt das Live-Release unverändert.
-3. **Verlauf** (`GET .../releases`): alle Releases mit Notizen, Änderungsübersicht, Fehlern und Rollbacks.
-4. **Rollback** (`POST .../releases/{n}/rollback`): veröffentlicht den Inhalt eines älteren Releases als **neues** Release mit höherer Nummer, damit Apps es annehmen. Der Verlauf wird nie verändert.
+**Releases** in der Projekt-Navigation zeigt allen Mitgliedern das Live-Release und den Verlauf. Owner sehen zusätzlich das nächste Release:
+1. **Vorschau:** die nächste Release-Nummer und pro Sprache, wie viele Keys neu, geändert oder entfernt sind (Sprache aufklappen für die Key-Namen). Darunter: Vorschläge, die noch auf Prüfung warten (nicht enthalten), ausgelassene veraltete Übersetzungen und Freigaben im Solo-Modus.
+2. **Veröffentlichen:** optional eine Notiz eintragen (steht im Verlauf neben der erzeugten Änderungsliste) und **Release {n} veröffentlichen** drücken. Lexicast löst die Fallbacks auf, schreibt eine JSON-Datei pro Sprache, signiert das Manifest und schaltet es live. Der Knopf ist gesperrt, wenn sich seit dem Live-Release nichts geändert hat. Pro Projekt kann nur ein Release gleichzeitig gebaut werden; ein fehlgeschlagener Build hält den Grund im Verlauf fest und lässt das Live-Release unverändert.
+3. **Verlauf:** jedes Release mit Datum, wer, Notiz, Änderungen pro Sprache, Fehlern und den Markierungen „Live“, „Fehlgeschlagen“ und „Zurückgerollt“.
+4. **Wiederherstellen (Rollback):** Bei einem älteren veröffentlichten Release fragt **Release {n} wiederherstellen …** nach Bestätigung und einer optionalen Notiz und veröffentlicht dann diesen Inhalt als **neues** Release mit höherer Nummer, damit Apps es annehmen. Die Releases dazwischen werden als „Zurückgerollt“ markiert. Der Verlauf wird nie verändert.
+
+API: `GET .../releases/preview`, `POST .../releases`, `POST .../releases/{n}/rollback`, `GET .../releases`; siehe [API-Referenz](api.md#releases).
 
 Freigegebene Texte sind erst live, wenn ein Release gebaut wurde. Ein Release enthält nur aktive Keys und Übersetzungen, die nicht veraltet sind.
 
