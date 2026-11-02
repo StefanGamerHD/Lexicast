@@ -150,7 +150,7 @@
                 {#if r.state === 'building'}<span class="badge">{t('releases.buildingState')}</span>{/if}
                 {#if rolledBack.has(r.number)}<span class="badge warn">{t('releases.rolledBack')}</span>{/if}
               </div>
-              <p class="small muted">{formatDate(r.createdAt)}{#if r.createdBy} · {r.createdBy}{/if}</p>
+              <p class="small muted">{formatDate(r.createdAt)}{#if r.createdBy}{' · '}{r.createdBy}{/if}</p>
               {#if r.rolledBackTo !== null}<p>{t('releases.rollbackOf', { number: r.rolledBackTo })}</p>{/if}
               {#if r.note}<p class="note">{r.note}</p>{/if}
               {#if r.summary?.languages}

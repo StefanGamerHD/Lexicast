@@ -38,7 +38,7 @@ English version: [docs/en](../en/README.md)
 | Bereich | Stand |
 |---|---|
 | Einrichtung, Konten, Einladungen, Passwort-Reset, Mail | fertig (API und Oberfläche) |
-| Projekte, Sprachen mit Fallback-Ketten, Mitglieder und Rollen | fertig (API); Oberfläche für Mitglieder und Sprachen geplant (UI-Teil 3b), Formular zum Anlegen von Projekten in UI-Teil 4 |
+| Projekte, Sprachen mit Fallback-Ketten, Mitglieder, Einladungen und Rollen | fertig (API und Oberfläche); das Formular zum Anlegen von Projekten folgt in UI-Teil 4 |
 | Keys und JSON-Import mit Vorschau | fertig (API und Oberfläche) |
 | Vorschläge und Prüfung (Vier-Augen-Prinzip, Solo-Modus) | fertig (API und Oberfläche) |
 | Releases, Rollback, Verlauf | fertig (API und Oberfläche) |

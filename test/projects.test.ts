@@ -213,3 +213,28 @@ test('project overview counts and open-suggestion counts per key, limited to vis
     assert.equal((await s.call('GET', '/api/v1/projects/demo', undefined, sam)).status, 404);
   } finally { await s.stop(); }
 });
+
+test('pending project invitations: owners list and revoke them; a revoked link no longer works', async () => {
+  const { s, admin, tina } = await world();
+  try {
+    const inv = await s.call('POST', '/api/v1/projects/demo/members', { email: 'nina@example.com', role: 'translator', language: 'de-AT' }, admin);
+    assert.equal(inv.status, 201);
+    const token = (inv.json.inviteUrl as string).split('/invite/')[1];
+    await s.call('POST', '/api/v1/projects/demo/members', { email: 'otto@example.com', role: 'reviewer', language: 'de' }, admin);
+
+    const list = await s.call('GET', '/api/v1/projects/demo/invitations', undefined, admin);
+    assert.equal(list.status, 200);
+    const nina = list.json.invitations.find((i: { email: string }) => i.email === 'nina@example.com');
+    assert.deepEqual({ email: nina.email, role: nina.role, language: nina.language, expired: nina.expired }, { email: 'nina@example.com', role: 'translator', language: 'de-AT', expired: false });
+    assert.equal(list.json.invitations.length, 2);
+    assert.equal((await s.call('GET', '/api/v1/projects/demo/invitations', undefined, tina)).status, 403);
+    assert.equal((await s.call('POST', `/api/v1/projects/demo/invitations/${nina.id}/revoke`, {}, tina)).status, 403);
+
+    assert.equal((await s.call('POST', `/api/v1/projects/demo/invitations/${nina.id}/revoke`, {}, admin)).status, 200);
+    assert.equal((await s.call('POST', `/api/v1/projects/demo/invitations/${nina.id}/revoke`, {}, admin)).status, 404);
+    assert.equal((await s.call('GET', '/api/v1/projects/demo/invitations', undefined, admin)).json.invitations.length, 1);
+    const accept = await s.call('POST', '/api/v1/invitations/accept', { token, displayName: 'Nina', password: PW });
+    assert.equal(accept.status, 400);
+    assert.equal(accept.json.error.code, 'invalid_invitation');
+  } finally { await s.stop(); }
+});

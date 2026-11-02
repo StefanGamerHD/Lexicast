@@ -4,7 +4,7 @@ Self-hostable server for translations that are reviewed by a second person, sign
 
 **English** · [Deutsch](README.de.md)
 
-> Status: early, not ready for production use. Server API complete for milestone 1; the web interface covers setup, accounts, projects, translating, review, keys with JSON import, and releases with rollback. Screens for members, languages, project settings and administration follow.
+> Status: early, not ready for production use. Server API complete for milestone 1; the web interface covers setup, accounts, projects, translating, review, keys with JSON import, releases with rollback, members and invitations, languages and project settings. Creating projects, account settings and the admin area follow.
 
 ## Why
 Translators suggest texts in a web editor, a second person approves them, a project owner presses "release", and apps fetch the new texts within minutes. Every release is a set of immutable JSON files plus a manifest signed with Ed25519; apps verify the signature, refuse older releases and fall back to bundled texts. One container, SQLite, no external storage.

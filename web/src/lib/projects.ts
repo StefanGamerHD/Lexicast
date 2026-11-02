@@ -35,6 +35,11 @@ export interface Release {
 }
 export interface ImportResult { applied: boolean; added: string[]; changed: string[]; reactivated: string[]; unchanged: number; removed: string[]; removedAreDeprecated: boolean }
 
+export interface MemberRow { id: number; email: string; displayName: string; role: 'owner' | 'reviewer' | 'translator'; language: string }
+export interface Invitation { id: number; email: string; role: string; language: string; createdAt: string; expiresAt: string; expired: boolean; invitedBy: string | null }
+
+export const isLanguageTag = (s: string): boolean => /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(s);
+
 export const loadProject = (slug: string) => api<ProjectInfo>('GET', `/projects/${slug}`);
 
 // The server pages keys (max 500 per request); the editor filters on the client, so it loads them all.

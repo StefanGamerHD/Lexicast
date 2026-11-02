@@ -30,9 +30,20 @@ curl -X POST https://translate.example.com/api/v1/projects \
 - **Slug:** lowercase letters, digits and dashes; it appears in URLs and in the delivery path.
 - **Languages** are BCP 47 tags like `de` or `de-AT`. One of them is the source language.
 - **Fallback chain:** when a text is missing in `de-AT`, the release uses `de`, then `en`. The chain is resolved when the release is built, so apps get complete files and need no fallback logic.
-- **Settings** (owners): `soloMode` (see Review), `progressPublic` (public progress page), name.
+The start page lists your projects. The project page shows each language with a progress bar, how many texts are in review or outdated, the live release, and buttons to translate or review. A navigation bar leads to the project's sections; you see only those your roles allow (Overview, Review, Keys, Releases, Members, Settings).
 
-The start page lists your projects. The project page shows each language with a progress bar, how many texts are in review or outdated, the live release, and buttons to translate or review.
+## Members and invitations
+Owners manage people under **Members**:
+- **Add a person or role:** email, role (translator, reviewer, owner) and, for translators and reviewers, the language. A person who already has an account gets the role at once. Everybody else gets an invitation to create an account (valid 7 days, usable once); without mail, or if sending fails, the page shows the link once with a copy button.
+- **People:** everyone with their roles; **Remove** next to a role takes it away. "Add a role…" fills in the person's email in the form above.
+- A project always keeps at least one owner. Removing your own owner role is asked for first, because you lose access to the owner sections.
+- **Open invitations:** email, role, who invited and until when it is valid (expired ones are marked). **Revoke** deletes the invitation; its link stops working at once.
+
+## Settings
+Owners change the project under **Settings**:
+- **General:** project name (the slug in addresses cannot be changed), **public progress page** on or off, **solo mode** on or off (see Reviewing).
+- **Languages:** every target language has a **fallback chain**, entered as other project languages separated by commas (e.g. `de, en`); empty means the source language only. The chain is checked against the project's languages before saving.
+- **Add a language:** a BCP 47 tag (e.g. `fr`, `pt-BR`, `de-AT`) and its fallback chain. Afterwards give someone the translator role for it. Removing a language is not possible yet.
 
 ## Keys and source texts
 A key is one text of your app, e.g. `cart.items` with the source text `{count} items in your cart`. Owners manage keys under **Keys** in the project's navigation.

@@ -128,7 +128,7 @@
       <textarea id="translation" lang={lang} rows="4" bind:this={area} bind:value oninput={changed} onkeydown={keys}
         aria-invalid={value && problems.length ? 'true' : undefined} aria-describedby="translation-count translation-problems"></textarea>
       <p class="hint counter" id="translation-count" class:over={value.length > limit}>
-        {t('translate.count', { count: value.length, max: limit })}{#if hasDraft} · {t('translate.draftSaved')}{/if}
+        {t('translate.count', { count: value.length, max: limit })}{#if hasDraft}{' · '}{t('translate.draftSaved')}{/if}
       </p>
       <div id="translation-problems" aria-live="polite">
         {#if value}{#each problems as p (p)}<p class="field-error">{t(`problem.${p}`)}</p>{/each}{/if}

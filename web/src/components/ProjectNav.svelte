@@ -3,7 +3,7 @@
   import { reviewLanguages, type ProjectInfo } from '../lib/projects.ts';
 
   // Breadcrumb plus the project's sections; each person sees only the sections their roles allow.
-  type Section = 'overview' | 'review' | 'keys' | 'releases' | 'other';
+  type Section = 'overview' | 'review' | 'keys' | 'releases' | 'members' | 'settings' | 'other';
   let { slug, info, current }: { slug: string; info: ProjectInfo | null; current: Section } = $props();
 
   const tabs = $derived(info ? [
@@ -11,10 +11,11 @@
     ...(reviewLanguages(info.roles, info.project).length ? [{ id: 'review', href: `/projects/${slug}/review`, label: t('tab.review') }] : []),
     ...(info.roles.owner ? [{ id: 'keys', href: `/projects/${slug}/keys`, label: t('tab.keys') }] : []),
     { id: 'releases', href: `/projects/${slug}/releases`, label: t('tab.releases') },
+    ...(info.roles.owner ? [{ id: 'members', href: `/projects/${slug}/members`, label: t('tab.members') }, { id: 'settings', href: `/projects/${slug}/settings`, label: t('tab.settings') }] : []),
   ] : []);
 </script>
 
-<p class="eyebrow"><a href="/">{t('nav.projects')}</a>{#if info}<span aria-hidden="true">&nbsp;/ </span><a href="/projects/{slug}">{info.project.name}</a>{/if}</p>
+<p class="eyebrow"><a href="/">{t('nav.projects')}</a>{#if info}<span aria-hidden="true">{' / '}</span><a href="/projects/{slug}">{info.project.name}</a>{/if}</p>
 {#if tabs.length}
   <nav class="tabs" aria-label={t('tab.label')}>
     {#each tabs as tab (tab.id)}
