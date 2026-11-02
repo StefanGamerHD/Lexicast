@@ -106,6 +106,18 @@ test('state-changing requests need our own Origin and JSON; auth endpoints are r
   } finally { await s.stop(); }
 });
 
+test('the strict auth limit covers sign-in and password endpoints only; other writes have their own limit per account', async () => {
+  const s = await start({ LEXICAST_AUTH_RATE_PER_MINUTE: '1', LEXICAST_WRITE_RATE_PER_MINUTE: '5' });
+  try {
+    const admin = await s.setup();                                                // uses the one auth request
+    assert.equal((await s.call('POST', '/api/v1/auth/login', { email: 'admin@example.com', password: PW })).status, 429);
+    const patch = () => s.call('PATCH', '/api/v1/me', { theme: 'dark' }, admin.cookie!);
+    for (let i = 0; i < 5; i++) assert.equal((await patch()).status, 200);       // not blocked by the auth limit
+    assert.equal((await patch()).status, 429);                                    // own write limit reached
+    assert.equal((await s.call('POST', '/api/v1/me/password', { currentPassword: PW, newPassword: PW + 'x' }, admin.cookie!)).status, 429); // auth limit
+  } finally { await s.stop(); }
+});
+
 test('invitations: admin only, single use, expiry, email becomes verified, one account per email', async () => {
   let t = Date.now();
   const s = await start({ LEXICAST_AUTH_RATE_PER_MINUTE: '0' }, () => t);

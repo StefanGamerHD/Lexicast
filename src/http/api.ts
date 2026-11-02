@@ -23,7 +23,10 @@ export function createApiHandler({ config, auth, signer, projects, keys, review,
   const origin = new URL(config.baseUrl).origin;
   const secure = config.baseUrl.startsWith('https://');
   const cookieName = secure ? '__Host-lexicast' : 'lexicast_session';
+  // Password guessing is limited strictly per IP; all other writes get a separate, higher limit per account.
+  const AUTH_ROUTES = new Set(['POST /setup', 'POST /auth/login', 'POST /auth/password-reset/request', 'POST /auth/password-reset/confirm', 'POST /invitations/accept', 'POST /me/password']);
   const authLimited = createLimiter(config.authRatePerMinute);
+  const writeLimited = createLimiter(config.writeRatePerMinute);
   const cookieOpts = { secure, maxAgeSeconds: 7 * 24 * 3600 };
 
   const clientIp = (req: IncomingMessage): string => {
@@ -44,7 +47,12 @@ export function createApiHandler({ config, auth, signer, projects, keys, review,
     try {
       if (req.method !== 'GET' && req.method !== 'HEAD') {
         if (req.headers.origin !== origin) throw new ApiError(403, 'bad_origin', 'Request origin is not allowed');
-        if (authLimited(clientIp(req))) throw new ApiError(429, 'rate_limited', 'Too many requests');
+        if (AUTH_ROUTES.has(route)) {
+          if (authLimited(clientIp(req))) throw new ApiError(429, 'rate_limited', 'Too many requests');
+        } else {
+          const u = currentUser(req);
+          if (writeLimited(u ? `user:${u.id}` : `ip:${clientIp(req)}`)) throw new ApiError(429, 'rate_limited', 'Too many requests');
+        }
       }
       switch (route) {
         case 'GET /instance': {

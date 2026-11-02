@@ -45,7 +45,7 @@ Database migrations run automatically at start and are recorded in `schema_migra
 |---|---|
 | `403 bad_origin` on every write | `LEXICAST_BASE_URL` does not match the address in the browser (scheme, host and port must match exactly). |
 | Signed out right after signing in | `LEXICAST_BASE_URL` starts with `https://` but you open the site over plain HTTP, so the `Secure` cookie is not stored. |
-| Everybody gets `429` | All requests come from the proxy IP: set `LEXICAST_TRUST_PROXY_HEADER`; or raise `LEXICAST_AUTH_RATE_PER_MINUTE` for heavy reviewing. |
+| Everybody gets `429` | All requests come from the proxy IP: set `LEXICAST_TRUST_PROXY_HEADER`; for very large review or import batches raise `LEXICAST_WRITE_RATE_PER_MINUTE`. |
 | The browser shows `{"error":{"code":"not_found"...}}` instead of the UI | UI not built or `LEXICAST_WEB_DIR` wrong; the start log says "web UI not found". Run `npm run build:web` and restart (the server reads the UI at start). |
 | Server stops at start with a message about a variable | the value is invalid; the message names the variable and the allowed values. |
 | Mail settings not applied in Docker | the variable is missing under `environment:` in `compose.yaml`. |

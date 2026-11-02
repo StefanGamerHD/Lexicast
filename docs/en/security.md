@@ -29,7 +29,7 @@ Please report privately through GitHub's "Report a vulnerability" on the reposit
 ## Web
 - Every write request must come from `LEXICAST_BASE_URL` (Origin check) and be JSON.
 - The editor UI runs under a strict Content-Security-Policy: `default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; font-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'`. No inline scripts, no third-party requests. The public progress page has its own strict policy and no JavaScript.
-- Rate limits per IP (in memory): write requests to the API and delivery/progress requests.
+- Rate limits (in memory): sign-in and password endpoints strictly per IP (default 20 per minute), other API writes per account (default 300), delivery and progress page per IP.
 - Request bodies are size-limited. Internal errors are never echoed; the log gets a short id.
 
 ## Container
