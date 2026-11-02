@@ -192,3 +192,24 @@ test('changes are written to the audit log without personal data in the entry te
     assert.ok(rows.every((r) => /^u-[0-9a-f]{12}$/.test(r.actor_pseudonym)));
   } finally { await s.stop(); }
 });
+
+test('project overview counts and open-suggestion counts per key, limited to visible languages', async () => {
+  const { s, admin, tina, rita, sam } = await world();
+  try {
+    assert.equal((await imp(s, admin, { a: 'Hello {name}', b: 'Bye' }, { apply: true })).status, 200);
+    const sub = (c: string, language: string, text: string) => s.call('POST', '/api/v1/projects/demo/suggestions', { key: 'a', language, text }, c);
+    assert.equal((await sub(tina, 'de', 'Hallo {name}')).status, 201);
+    assert.equal((await sub(admin, 'de-AT', 'Servus {name}')).status, 201);
+
+    const r = await s.call('GET', '/api/v1/projects/demo', undefined, tina);
+    const de = r.json.progress.languages.find((l: { tag: string }) => l.tag === 'de');
+    assert.deepEqual({ ...de }, { tag: 'de', translated: 0, total: 2, percent: 0, inReview: 1, outdated: 0, isSource: false });
+    assert.equal(r.json.progress.liveRelease, null);
+
+    const keysOf = async (c: string) => (await s.call('GET', keysUrl, undefined, c)).json.keys as { name: string; openSuggestions: Record<string, number> }[];
+    assert.deepEqual((await keysOf(tina)).find((k) => k.name === 'a')!.openSuggestions, { de: 1 });          // de-AT is not Tina's language
+    assert.deepEqual((await keysOf(admin)).find((k) => k.name === 'a')!.openSuggestions, { de: 1, 'de-AT': 1 });
+    assert.deepEqual((await keysOf(rita)).find((k) => k.name === 'b')!.openSuggestions, {});
+    assert.equal((await s.call('GET', '/api/v1/projects/demo', undefined, sam)).status, 404);
+  } finally { await s.stop(); }
+});

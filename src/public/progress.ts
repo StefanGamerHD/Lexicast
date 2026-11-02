@@ -12,8 +12,14 @@ export interface Progress {
 
 // Counts only: no key names, no texts, no people. Returns null for unknown AND for hidden projects (no existence leak).
 export function loadProgress(db: DatabaseSync, slug: string): Progress | null {
-  const p = db.prepare('SELECT id, slug, name, source_language, progress_public FROM projects WHERE slug = ?').get(slug) as { id: number; slug: string; name: string; source_language: string; progress_public: number } | undefined;
+  const p = db.prepare('SELECT id, progress_public FROM projects WHERE slug = ?').get(slug) as { id: number; progress_public: number } | undefined;
   if (!p || p.progress_public !== 1) return null;
+  return countProgress(db, p.id);
+}
+
+// The same counts for any project; callers check access first (members see them on the project overview).
+export function countProgress(db: DatabaseSync, projectId: number): Progress {
+  const p = db.prepare('SELECT id, slug, name, source_language FROM projects WHERE id = ?').get(projectId) as { id: number; slug: string; name: string; source_language: string };
   const total = (db.prepare("SELECT COUNT(*) AS n FROM keys WHERE project_id = ? AND state = 'active'").get(p.id) as { n: number }).n;
   const langs = db.prepare('SELECT tag FROM project_languages WHERE project_id = ? ORDER BY tag').all(p.id) as { tag: string }[];
   const counts = (sql: string) => new Map((db.prepare(sql).all(p.id) as { language: string; n: number }[]).map((r) => [r.language, r.n]));
