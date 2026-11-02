@@ -26,7 +26,7 @@ export function createProjectRoutes({ projects, keys, review, releases, mailer, 
     r('POST', '/projects', true, (c) => ({ status: 201, body: { project: projects.create(c.user, { slug: c.body.slug, name: c.body.name, sourceLanguage: c.body.sourceLanguage, languages: c.body.languages }) } })),
     r('GET', `/projects/${SLUG}`, false, (c) => {
       const { project, roles } = projects.access(c.user, c.params[0]!);
-      return { status: 200, body: { project, roles: { owner: roles.owner, reviewer: [...roles.reviewer], translator: [...roles.translator] } } };
+      return { status: 200, body: { project, roles: { owner: roles.owner, reviewer: [...roles.reviewer], translator: [...roles.translator] }, progress: projects.progress(c.user, c.params[0]!) } };
     }),
     r('PATCH', `/projects/${SLUG}`, true, (c) => ({ status: 200, body: { project: projects.updateSettings(c.user, c.params[0]!, c.body) } })),
     r('PUT', `/projects/${SLUG}/languages/${TAG}`, true, (c) => ({ status: 200, body: { project: projects.setLanguage(c.user, c.params[0]!, c.params[1], c.body.fallback) } })),

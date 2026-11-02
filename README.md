@@ -2,7 +2,7 @@
 
 Self-hostable server for translations that are reviewed by a second person, signed, and delivered live to running apps.
 
-Status: early. Exists: signed releases with rollback, static delivery, database schema, instance setup, sign-in and invitations (JSON API), signing key in a separate signer process. Projects, members with roles per language, keys and JSON import (with preview) exist as API. Suggestions and review (four-eyes, solo mode as logged exception) exist as API. Releases (preview, build, signed publish, rollback) exist as API. Public progress page exists (de/en). Mail (invitations, password reset, digest notifications) exists. The editor UI (Svelte) has started: setup, sign-in, invitation and password reset pages; the project screens follow. Not ready for production use.
+Status: early. Exists: signed releases with rollback, static delivery, database schema, instance setup, sign-in and invitations (JSON API), signing key in a separate signer process. Projects, members with roles per language, keys and JSON import (with preview) exist as API. Suggestions and review (four-eyes, solo mode as logged exception) exist as API. Releases (preview, build, signed publish, rollback) exist as API. Public progress page exists (de/en). Mail (invitations, password reset, digest notifications) exists. The editor UI (Svelte) has setup, sign-in, invitation and password reset pages, the project list and overview, translating and the review queue; keys/import, members, languages, releases, account settings and instance admin screens follow. Not ready for production use.
 
 ## What it does (planned for v1)
 - Translators suggest texts in a web editor, a second person approves, the owner presses "release".
@@ -25,9 +25,9 @@ The response contains the public signing key and its fingerprint: embed the publ
 | `GET /instance`, `POST /setup`, `POST /auth/login`, `POST /auth/logout`, `GET /me` | see above |
 | `POST /invitations`, `POST /invitations/accept` | instance admin invites; anyone with the link accepts |
 | `GET /projects`, `POST /projects` | members see their projects; only the instance admin creates (becomes owner) |
-| `GET /projects/{slug}`, `PUT /projects/{slug}/languages/{tag}` | members; owners change languages and fallback chains |
+| `GET /projects/{slug}`, `PUT /projects/{slug}/languages/{tag}` | members (with your roles and progress counts per language); owners change languages and fallback chains |
 | `GET/POST /projects/{slug}/members`, `POST .../members/remove` | owners (existing accounts are added, unknown emails get an invitation link) |
-| `GET/POST /projects/{slug}/keys`, `PATCH .../keys/{name}` | members read (translators and reviewers see their languages only); owners write |
+| `GET/POST /projects/{slug}/keys`, `PATCH .../keys/{name}` | members read (translators and reviewers see their languages only, incl. the number of open suggestions); owners write |
 | `POST /projects/{slug}/keys/import` | owners; `apply:false` previews, `apply:true` writes, `deprecateMissing:true` marks absent keys deprecated |
 
 | `PATCH /projects/{slug}` | owners: name, `soloMode`, `progressPublic` |
@@ -61,6 +61,7 @@ A Svelte single-page app in `web/`, built by Vite into `dist/web` and served by 
 - Routes served by the server: `/`, `/login`, `/forgot`, `/setup`, `/account`, `/invite/{token}`, `/reset/{token}`, `/projects/...`, `/admin/...`; files under `/static/` (content-hashed, cached for a year).
 - Content-Security-Policy: scripts and styles from the same origin only, no inline code, no third-party requests.
 - German and English (browser language first, then the account setting), light/dark/system, usable from 360 px width.
+- Screens so far: project list, project overview (progress per language), Translate (filters, placeholder chips, live checks, drafts kept in the browser, keyboard shortcuts) and the review queue (word diff, warnings, reject with reason, batch approve for suggestions without warnings).
 
 ## Run
 ```bash

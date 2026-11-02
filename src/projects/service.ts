@@ -3,6 +3,7 @@ import { pseudonymOf, writeAudit } from '../audit.ts';
 import { hashToken, newToken, normalizeEmail } from '../auth/crypto.ts';
 import type { User } from '../auth/service.ts';
 import { ApiError } from '../http/util.ts';
+import { countProgress } from '../public/progress.ts';
 import { isLanguageTag, isProjectSlug } from '../release/validate.ts';
 
 export type Role = 'owner' | 'reviewer' | 'translator';
@@ -178,6 +179,13 @@ export function createProjects(db: DatabaseSync, now: () => number = Date.now) {
     } catch (e) { db.exec('ROLLBACK'); throw e; }
   }
 
-  return { access, ownerAccess, create, updateSettings, listFor, setLanguage, listMembers, addMember, removeMember, audit };
+  // Counts per language for the project overview; any member may see them.
+  function progress(user: User, slug: string) {
+    const { project } = access(user, slug);
+    const { languages, liveRelease } = countProgress(db, project.id);
+    return { languages, liveRelease };
+  }
+
+  return { access, ownerAccess, progress, create, updateSettings, listFor, setLanguage, listMembers, addMember, removeMember, audit };
 }
 export type Projects = ReturnType<typeof createProjects>;

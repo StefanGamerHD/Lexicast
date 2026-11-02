@@ -9,14 +9,21 @@
   import Invite from './pages/Invite.svelte';
   import Login from './pages/Login.svelte';
   import NotFound from './pages/NotFound.svelte';
+  import Project from './pages/Project.svelte';
   import Reset from './pages/Reset.svelte';
+  import Review from './pages/Review.svelte';
   import Setup from './pages/Setup.svelte';
+  import Translate from './pages/Translate.svelte';
 
   // access: 'user' needs a session, 'guest' is for signed-out people, 'any' is both. Keep in sync with APP_ROUTES in src/web/handler.ts.
   type Access = 'user' | 'guest' | 'any';
   interface Route { pattern: RegExp; page: Component<any>; access: Access; props?: (m: RegExpExecArray) => Record<string, string> }
   const routes: Route[] = [
     { pattern: /^\/$/, page: Home, access: 'user' },
+    { pattern: /^\/projects$/, page: Home, access: 'user' },
+    { pattern: /^\/projects\/([a-z0-9][a-z0-9-]*)$/, page: Project, access: 'user', props: (m) => ({ slug: m[1]! }) },
+    { pattern: /^\/projects\/([a-z0-9][a-z0-9-]*)\/translate\/([A-Za-z0-9-]+)$/, page: Translate, access: 'user', props: (m) => ({ slug: m[1]!, lang: m[2]! }) },
+    { pattern: /^\/projects\/([a-z0-9][a-z0-9-]*)\/review$/, page: Review, access: 'user', props: (m) => ({ slug: m[1]! }) },
     { pattern: /^\/login$/, page: Login, access: 'guest' },
     { pattern: /^\/forgot$/, page: Forgot, access: 'guest' },
     { pattern: /^\/setup$/, page: Setup, access: 'any' },

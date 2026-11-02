@@ -50,9 +50,8 @@ test('sign-in: wrong password, then success with return path', async ({ page }) 
 
   await page.getByLabel('Password', { exact: true }).fill(ADMIN.password);
   await page.getByRole('button', { name: 'Sign in' }).click();
-  // /projects has no screen yet (next PR): the app shows its not-found page, signed in
   await expect(page).toHaveURL(/\/projects$/);
-  await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Your projects' })).toBeVisible();
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page).toHaveURL(/\/login$/);
   noCsp();

@@ -71,11 +71,14 @@ export function createKeys(db: DatabaseSync, projects: Projects, now: () => numb
     const rows = db.prepare(`SELECT * FROM keys WHERE ${where.join(' AND ')} ORDER BY name LIMIT ? OFFSET ?`).all(...args, limit, offset) as unknown as KeyRow[];
     const visible = (lang: string) => roles.owner || roles.reviewer.has(lang) || roles.translator.has(lang);
     const tr = db.prepare('SELECT language, text, outdated FROM translations WHERE key_id = ?');
+    const open = db.prepare("SELECT language, COUNT(*) AS n FROM suggestions WHERE key_id = ? AND state = 'open' GROUP BY language");
     return {
       total,
       keys: rows.map((k) => ({
         name: k.name, sourceText: k.source_text, contextNote: k.context_note, maxLength: k.max_length, state: k.state,
         translations: Object.fromEntries((tr.all(k.id) as { language: string; text: string; outdated: number }[]).filter((t) => visible(t.language)).map((t) => [t.language, { text: t.text, outdated: t.outdated === 1 }])),
+        // counts only: translators see that a text waits for review, not whose text it is
+        openSuggestions: Object.fromEntries((open.all(k.id) as { language: string; n: number }[]).filter((o) => visible(o.language)).map((o) => [o.language, o.n])),
       })),
     };
   }
