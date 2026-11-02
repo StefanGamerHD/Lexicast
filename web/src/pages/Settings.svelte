@@ -37,23 +37,26 @@
   const project = $derived(info?.project ?? null);
   const dirty = $derived(!!project && (name.trim() !== project.name || soloMode !== project.soloMode || progressPublic !== project.progressPublic));
 
-  // "de, en" -> ["de", "en"], checked against the project's languages like the server does
+  // "DE, en" -> ["de", "en"]: matched to the project's tags ignoring case (like the duplicate check when adding), then checked like the server does
   function parseChain(tag: string, text: string, tags: string[]): { list: string[]; error: string } {
-    const list = text.split(/[\s,]+/).map((s) => s.trim()).filter(Boolean);
-    for (const f of list) {
-      if (f === tag) return { list, error: t('settings.chainSelf') };
-      if (!tags.includes(f)) return { list, error: t('settings.chainUnknown', { tag: f }) };
+    const list: string[] = [];
+    for (const typed of text.split(/[\s,]+/).filter(Boolean)) {
+      if (typed.toLowerCase() === tag.toLowerCase()) return { list, error: t('settings.chainSelf') };
+      const known = tags.find((x) => x.toLowerCase() === typed.toLowerCase());
+      if (!known) return { list, error: t('settings.chainUnknown', { tag: typed }) };
+      list.push(known);
     }
     if (new Set(list).size !== list.length) return { list, error: t('settings.chainDuplicate') };
     return { list, error: '' };
   }
 
-  async function run(fn: () => Promise<Project>, done: string) {
+  // apply() takes over only the fields of the form that was saved, so unsaved edits in the other forms stay
+  async function run(fn: () => Promise<Project>, done: string, apply: (p: Project) => void) {
     busy = true; error = ''; message = '';
     try {
       const p = await fn();
       info = { ...info!, project: p };
-      adopt(p);
+      apply(p);
       message = done;
     } catch (e) { error = errorText(e); } finally { busy = false; }
   }
@@ -61,14 +64,16 @@
   function saveGeneral(e: SubmitEvent) {
     e.preventDefault();
     if (!name.trim()) return;
-    return run(async () => (await api<{ project: Project }>('PATCH', `/projects/${slug}`, { name: name.trim(), soloMode, progressPublic })).project, t('settings.saved'));
+    return run(async () => (await api<{ project: Project }>('PATCH', `/projects/${slug}`, { name: name.trim(), soloMode, progressPublic })).project, t('settings.saved'),
+      (p) => { name = p.name; soloMode = p.soloMode; progressPublic = p.progressPublic; });
   }
 
   function saveChain(tag: string) {
     const { list, error: err } = parseChain(tag, chains[tag] ?? '', project!.languages.map((l) => l.tag));
     chainErrors[tag] = err;
     if (err) return;
-    return run(async () => (await api<{ project: Project }>('PUT', `/projects/${slug}/languages/${tag}`, { fallback: list })).project, t('settings.chainSaved', { lang: tag }));
+    return run(async () => (await api<{ project: Project }>('PUT', `/projects/${slug}/languages/${tag}`, { fallback: list })).project, t('settings.chainSaved', { lang: tag }),
+      (p) => { chains[tag] = (p.languages.find((l) => l.tag === tag)?.fallback ?? list).join(', '); chainErrors[tag] = ''; });
   }
 
   function addLanguage(e: SubmitEvent) {
@@ -83,7 +88,7 @@
       const p = (await api<{ project: Project }>('PUT', `/projects/${slug}/languages/${tag}`, { fallback: list })).project;
       newTag = ''; newChain = '';
       return p;
-    }, t('settings.languageAdded', { lang: tag }));
+    }, t('settings.languageAdded', { lang: tag }), () => { chains[tag] = list.join(', '); });
   }
 </script>
 

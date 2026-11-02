@@ -238,3 +238,22 @@ test('pending project invitations: owners list and revoke them; a revoked link n
     assert.equal(accept.json.error.code, 'invalid_invitation');
   } finally { await s.stop(); }
 });
+
+test('invitations past their expiry are listed as expired and can still be revoked; the revocation is audited', async () => {
+  const { s, admin } = await world();
+  try {
+    assert.equal((await s.call('POST', '/api/v1/projects/demo/members', { email: 'old@example.com', role: 'reviewer', language: 'de' }, admin)).status, 201);
+    const list = async () => (await s.call('GET', '/api/v1/projects/demo/invitations', undefined, admin)).json.invitations as { id: number; expired: boolean }[];
+    const [inv] = await list();
+    assert.equal(inv!.expired, false);
+    // the service compares stored ISO timestamps with the current time; move the expiry around it
+    const setExpiry = (ms: number) => s.db.prepare('UPDATE invitations SET expires_at = ? WHERE id = ?').run(new Date(Date.now() + ms).toISOString(), inv!.id);
+    setExpiry(60_000);
+    assert.equal((await list())[0]!.expired, false);
+    setExpiry(-60_000);
+    assert.equal((await list())[0]!.expired, true);
+    assert.equal((await s.call('POST', `/api/v1/projects/demo/invitations/${inv!.id}/revoke`, {}, admin)).status, 200);
+    const entry = s.db.prepare("SELECT details FROM audit_log WHERE action = 'member.invite.revoke'").get() as { details: string };
+    assert.deepEqual(JSON.parse(entry.details), { role: 'reviewer', language: 'de' });
+  } finally { await s.stop(); }
+});

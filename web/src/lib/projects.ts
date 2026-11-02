@@ -1,6 +1,6 @@
 // Shapes of the project API (src/http/project-routes.ts) and small helpers the project screens share.
 import { api } from './api.ts';
-import { i18n } from './i18n.svelte.ts';
+import { i18n, t } from './i18n.svelte.ts';
 
 export interface Language { tag: string; fallback: string[] }
 export interface Project { id: number; slug: string; name: string; sourceLanguage: string; soloMode: boolean; progressPublic: boolean; languages: Language[] }
@@ -37,6 +37,9 @@ export interface ImportResult { applied: boolean; added: string[]; changed: stri
 
 export interface MemberRow { id: number; email: string; displayName: string; role: 'owner' | 'reviewer' | 'translator'; language: string }
 export interface Invitation { id: number; email: string; role: string; language: string; createdAt: string; expiresAt: string; expired: boolean; invitedBy: string | null }
+
+// "Owner", "Reviewer de", "Translator fr": one text per role, shared by the role badges and the members page.
+export const roleLabel = (role: string, language: string): string => (language ? t(`role.${role}Of`, { lang: language }) : t(`role.${role}`));
 
 export const isLanguageTag = (s: string): boolean => /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(s);
 
