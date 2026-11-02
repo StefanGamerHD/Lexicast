@@ -198,9 +198,9 @@ export function createProjects(db: DatabaseSync, now: () => number = Date.now) {
   // Deleting the row makes the link invalid at once (accepting looks the token up).
   function revokeInvitation(user: User, slug: string, id: number): void {
     const { project } = ownerAccess(user, slug);
-    const r = db.prepare('DELETE FROM invitations WHERE id = ? AND project_id = ? AND used_at IS NULL').run(id, project.id);
-    if (!r.changes) throw new ApiError(404, 'not_found', 'Invitation not found');
-    audit(user.id, 'member.invite.revoke', slug);
+    const r = db.prepare('DELETE FROM invitations WHERE id = ? AND project_id = ? AND used_at IS NULL RETURNING role, language').get(id, project.id) as { role: string; language: string } | undefined;
+    if (!r) throw new ApiError(404, 'not_found', 'Invitation not found');
+    audit(user.id, 'member.invite.revoke', slug, undefined, { role: r.role, language: r.language });
   }
 
   return { access, ownerAccess, progress, listInvitations, revokeInvitation, create, updateSettings, listFor, setLanguage, listMembers, addMember, removeMember, audit };

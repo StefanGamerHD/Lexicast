@@ -3,7 +3,7 @@
   import { errorText } from '../lib/errors.ts';
   import { t } from '../lib/i18n.svelte.ts';
   import { navigate } from '../lib/router.svelte.ts';
-  import { formatDate, loadProject, type Invitation, type MemberRow, type ProjectInfo } from '../lib/projects.ts';
+  import { formatDate, loadProject, roleLabel as label, type Invitation, type MemberRow, type ProjectInfo } from '../lib/projects.ts';
   import { session } from '../lib/session.svelte.ts';
   import CopyLink from '../components/CopyLink.svelte';
   import Field from '../components/Field.svelte';
@@ -56,7 +56,7 @@
     }
     return [...by.values()];
   });
-  const roleLabel = (r: { role: string; language: string }) => (r.role === 'owner' ? t('role.owner') : t(`role.${r.role}Of`, { lang: r.language }));
+  const roleLabel = (r: { role: string; language: string }) => label(r.role, r.language);
 
   async function run(fn: () => Promise<void>) {
     busy = true; error = ''; message = ''; link = '';
@@ -85,7 +85,8 @@
     return run(async () => {
       await api('POST', `/projects/${slug}/members/remove`, { userId: r.id, role: r.role, ...(r.role === 'owner' ? {} : { language: r.language }) });
       message = t('members.removed', { role: roleLabel(r), name: r.displayName });
-      if (self) navigate(`/projects/${slug}`);
+      // with another role left the project stays reachable; without one it answers "not found", so go to the start page
+      if (self) navigate(rows.some((x) => x.id === r.id && x !== r) ? `/projects/${slug}` : '/');
     });
   }
 
@@ -107,7 +108,7 @@
     <ProjectNav {slug} {info} current="members" />
     <h1>{t('members.title')}</h1>
     {#if error}<Notice><p>{error}</p></Notice>{/if}
-    {#if message}<Notice kind="ok"><p>{message}</p>{#if link}<CopyLink url={link} />{/if}</Notice>{/if}
+    {#if message}<Notice kind="ok"><p>{message}</p>{#if link}<CopyLink text={link} testid="invite-link" />{/if}</Notice>{/if}
     {#if !info}
       {#if !error}<p class="muted" aria-busy="true">{t('app.loading')}</p>{/if}
     {:else if !info.roles.owner}
