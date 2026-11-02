@@ -16,11 +16,10 @@ Alle Einstellungen sind Umgebungsvariablen. Für einen lokalen Test ist keine n�
 | Variable | Standard | Bedeutung |
 |---|---|---|
 | `LEXICAST_RATE_PER_MINUTE` | `600` | Anfragen pro Minute und IP für die Auslieferung (`/p/...`) und die öffentliche Fortschrittsseite. `0` = keine Grenze. |
-| `LEXICAST_AUTH_RATE_PER_MINUTE` | `20` | Schreibende Anfragen (POST, PATCH, PUT) pro Minute und IP an die JSON-API: Anmeldung, Einrichtung, Einladungen, derzeit aber auch Vorschläge, Freigaben und andere Änderungen. `0` = keine Grenze. Siehe Hinweis unten. |
+| `LEXICAST_AUTH_RATE_PER_MINUTE` | `20` | Anmeldung, Einrichtung, Passwort-Reset, Annehmen einer Einladung und Passwortänderung: Anfragen pro Minute und IP. Hält das Erraten von Passwörtern langsam. `0` = keine Grenze. |
+| `LEXICAST_WRITE_RATE_PER_MINUTE` | `300` | Alle anderen schreibenden Anfragen (POST, PATCH, PUT) an die JSON-API, pro Minute und **Konto** (ohne Anmeldung pro IP): Vorschläge, Freigaben, Importe, Einstellungen. `0` = keine Grenze. |
 | `LEXICAST_TRUST_PROXY_HEADER` | leer | Header mit der echten Client-IP hinter einem vertrauenswürdigen Proxy, z. B. `cf-connecting-ip`. Leer = Adresse der Verbindung. |
 | `LEXICAST_ALLOWED_ORIGINS` | `*` | Kommagetrennte Origins, von denen Browser Releases laden dürfen (CORS auf `/p/...`). `*` = alle. |
-
-Hinweis zu `LEXICAST_AUTH_RATE_PER_MINUTE`: Die Grenze zählt alle schreibenden Anfragen einer IP an die API, nicht nur Anmeldungen. Wer innerhalb einer Minute mehr als 20 Vorschläge freigibt (zum Beispiel mit der Sammelfreigabe), bekommt `429 rate_limited` und muss eine Minute warten. Erhöhe den Wert, wenn sich mehrere Personen eine IP teilen oder wenn ihr in großen Mengen prüft.
 
 ## Mail
 | Variable | Standard | Bedeutung |

@@ -40,8 +40,11 @@
     if (!el) { value += chip; changed(); return; }
     const start = el.selectionStart, end = el.selectionEnd;
     value = value.slice(0, start) + chip + value.slice(end);
+    // write the field and the cursor at once: a deferred cursor update could land in the middle of the next typing
+    el.value = value;
+    el.focus();
+    el.setSelectionRange(start + chip.length, start + chip.length);
     changed();
-    requestAnimationFrame(() => { el.focus(); el.setSelectionRange(start + chip.length, start + chip.length); });
   }
 
   async function submit(e?: SubmitEvent) {

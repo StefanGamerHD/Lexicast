@@ -29,7 +29,7 @@ Bitte melde sie vertraulich über „Report a vulnerability“ auf GitHub im Rep
 ## Web
 - Jede schreibende Anfrage muss von `LEXICAST_BASE_URL` kommen (Origin-Prüfung) und JSON sein.
 - Die Oberfläche läuft unter einer strengen Content-Security-Policy: `default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; font-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'`. Kein Inline-Code, keine Anfragen an Dritte. Die öffentliche Fortschrittsseite hat eine eigene strenge Policy und kein JavaScript.
-- Ratenbegrenzung pro IP (im Speicher): schreibende API-Anfragen sowie Auslieferung und Fortschrittsseite.
+- Ratenbegrenzung (im Speicher): Anmelde- und Passwort-Endpunkte streng pro IP (Standard 20 pro Minute), andere API-Schreibzugriffe pro Konto (Standard 300), Auslieferung und Fortschrittsseite pro IP.
 - Anfragen sind in der Größe begrenzt. Interne Fehler werden nie zurückgegeben; das Log bekommt eine kurze ID.
 
 ## Container

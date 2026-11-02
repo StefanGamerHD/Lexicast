@@ -45,7 +45,7 @@ Datenbank-Migrationen laufen beim Start automatisch und werden in `schema_migrat
 |---|---|
 | `403 bad_origin` bei jeder Änderung | `LEXICAST_BASE_URL` passt nicht zur Adresse im Browser (Schema, Host und Port müssen genau stimmen). |
 | Nach der Anmeldung sofort wieder abgemeldet | `LEXICAST_BASE_URL` beginnt mit `https://`, du öffnest die Seite aber über HTTP, deshalb wird das `Secure`-Cookie nicht gespeichert. |
-| Alle bekommen `429` | Alle Anfragen kommen von der Proxy-IP: `LEXICAST_TRUST_PROXY_HEADER` setzen; oder `LEXICAST_AUTH_RATE_PER_MINUTE` erhöhen, wenn viel geprüft wird. |
+| Alle bekommen `429` | Alle Anfragen kommen von der Proxy-IP: `LEXICAST_TRUST_PROXY_HEADER` setzen; bei sehr großen Prüf- oder Import-Mengen `LEXICAST_WRITE_RATE_PER_MINUTE` erhöhen. |
 | Der Browser zeigt `{"error":{"code":"not_found"...}}` statt der Oberfläche | Oberfläche nicht gebaut oder `LEXICAST_WEB_DIR` falsch; im Start-Log steht „web UI not found“. `npm run build:web` ausführen und neu starten (der Server liest die Oberfläche beim Start). |
 | Server stoppt beim Start mit einer Meldung zu einer Variable | der Wert ist ungültig; die Meldung nennt die Variable und die erlaubten Werte. |
 | Mail-Einstellungen wirken in Docker nicht | die Variable fehlt unter `environment:` in `compose.yaml`. |

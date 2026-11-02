@@ -6,7 +6,7 @@ Die Feldnamen und Fehlercodes sind englisch, weil Programme sie lesen.
 
 ## Grundregeln
 - **Sitzung:** Melde dich mit `POST /auth/login` an; die Antwort setzt ein HttpOnly-Cookie (`lexicast_session`, über HTTPS `__Host-lexicast`, `SameSite=Strict`, 7 Tage). Schicke es bei jeder Anfrage mit (`curl -c cookies.txt` / `-b cookies.txt`). API-Tokens für Skripte sind geplant.
-- **Schreibende Anfragen** (POST, PATCH, PUT) brauchen `Origin: {LEXICAST_BASE_URL}` und `Content-Type: application/json`. Andere Origins bekommen `403 bad_origin`. Sie zählen pro IP gegen `LEXICAST_AUTH_RATE_PER_MINUTE`.
+- **Schreibende Anfragen** (POST, PATCH, PUT) brauchen `Origin: {LEXICAST_BASE_URL}` und `Content-Type: application/json`. Andere Origins bekommen `403 bad_origin`. Anmelde- und Passwort-Endpunkte zählen pro IP gegen `LEXICAST_AUTH_RATE_PER_MINUTE`, alle anderen Schreibzugriffe pro Konto gegen `LEXICAST_WRITE_RATE_PER_MINUTE`.
 - **Fehler** haben die Form `{"error":{"code":"...","message":"..."}}`. Der `code` ist stabil und für Programme gedacht; die `message` ist englisch und für Menschen. Unbekannte interne Fehler liefern `500 internal` mit einer kurzen ID, die auch im Server-Log steht.
 - **Nicht gefunden statt verboten:** Projekte, in denen du kein Mitglied bist, antworten mit `404 not_found`. Innerhalb eines Projekts antworten Aktionen, die deine Rolle nicht erlaubt, mit `403 forbidden`.
 - Anfragen sind in der Größe begrenzt (Import: 2 MB).
@@ -94,7 +94,7 @@ Warnungscodes: `much_longer`, `much_shorter`, `whitespace_differs`, `punctuation
 | `bad_origin` | 403 | `Origin`-Header fehlt oder ist falsch |
 | `forbidden` | 403 | deine Rolle erlaubt das nicht |
 | `not_found` | 404 | unbekannt, oder ein Projekt, in dem du kein Mitglied bist |
-| `rate_limited` | 429 | zu viele Anfragen von deiner IP |
+| `rate_limited` | 429 | zu viele Anfragen (Anmelde-Endpunkte: von deiner IP; andere Schreibzugriffe: von deinem Konto) |
 | `invalid_credentials`, `locked` | 401/429 | falsche Anmeldedaten, Konto für 15 Minuten gesperrt |
 | `weak_password`, `invalid_email`, `invalid_field`, `invalid_name`, `invalid_slug`, `invalid_languages`, `invalid_language`, `invalid_role` | 400 | ungültige Eingabe |
 | `bad_setup_token`, `setup_done` | 403/409 | Einrichtung |

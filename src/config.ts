@@ -21,6 +21,7 @@ export interface Config {
   webDir: string;
   baseUrl: string;
   authRatePerMinute: number;
+  writeRatePerMinute: number;
   host: string;
   port: number;
   ratePerMinute: number;
@@ -72,6 +73,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     webDir: path.resolve(env.LEXICAST_WEB_DIR || fileURLToPath(new URL('../dist/web', import.meta.url))),
     baseUrl,
     authRatePerMinute: int('LEXICAST_AUTH_RATE_PER_MINUTE', env.LEXICAST_AUTH_RATE_PER_MINUTE, 20, 0, 100_000),
+    writeRatePerMinute: int('LEXICAST_WRITE_RATE_PER_MINUTE', env.LEXICAST_WRITE_RATE_PER_MINUTE, 300, 0, 100_000),
     host,
     port,
     ratePerMinute: int('LEXICAST_RATE_PER_MINUTE', env.LEXICAST_RATE_PER_MINUTE, 600, 0, 1_000_000),

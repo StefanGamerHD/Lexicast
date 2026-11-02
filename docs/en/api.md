@@ -4,7 +4,7 @@ The JSON API lives under `/api/v1`. The web interface uses exactly this API, so 
 
 ## Conventions
 - **Session:** sign in with `POST /auth/login`; the response sets an HttpOnly cookie (`lexicast_session`, or `__Host-lexicast` over HTTPS, `SameSite=Strict`, 7 days). Send it with every request (`curl -c cookies.txt` / `-b cookies.txt`). API tokens for scripts are planned.
-- **Write requests** (POST, PATCH, PUT) must carry `Origin: {LEXICAST_BASE_URL}` and `Content-Type: application/json`. Other origins get `403 bad_origin`. They count against `LEXICAST_AUTH_RATE_PER_MINUTE` per IP.
+- **Write requests** (POST, PATCH, PUT) must carry `Origin: {LEXICAST_BASE_URL}` and `Content-Type: application/json`. Other origins get `403 bad_origin`. Sign-in and password endpoints count against `LEXICAST_AUTH_RATE_PER_MINUTE` per IP, all other writes against `LEXICAST_WRITE_RATE_PER_MINUTE` per account.
 - **Errors** have the form `{"error":{"code":"...","message":"..."}}`. The `code` is stable and meant for programs; the `message` is English and for humans. Unknown internal errors return `500 internal` with a short id that also appears in the server log.
 - **Not found vs. forbidden:** projects you are not a member of answer `404 not_found`. Inside a project, actions your role does not allow answer `403 forbidden`.
 - Request bodies are limited in size (import: 2 MB).
@@ -92,7 +92,7 @@ Warning codes: `much_longer`, `much_shorter`, `whitespace_differs`, `punctuation
 | `bad_origin` | 403 | missing or wrong `Origin` header |
 | `forbidden` | 403 | your role does not allow this |
 | `not_found` | 404 | unknown, or a project you are not a member of |
-| `rate_limited` | 429 | too many requests from your IP |
+| `rate_limited` | 429 | too many requests (sign-in endpoints: from your IP; other writes: from your account) |
 | `invalid_credentials`, `locked` | 401/429 | wrong sign-in, account locked for 15 minutes |
 | `weak_password`, `invalid_email`, `invalid_field`, `invalid_name`, `invalid_slug`, `invalid_languages`, `invalid_language`, `invalid_role` | 400 | invalid input |
 | `bad_setup_token`, `setup_done` | 403/409 | setup |

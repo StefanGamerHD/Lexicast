@@ -16,11 +16,10 @@ All settings are environment variables. None are required for a local test; for 
 | Variable | Default | Meaning |
 |---|---|---|
 | `LEXICAST_RATE_PER_MINUTE` | `600` | Requests per minute and IP for delivery (`/p/...`) and the public progress page. `0` = no limit. |
-| `LEXICAST_AUTH_RATE_PER_MINUTE` | `20` | Write requests (POST, PATCH, PUT) per minute and IP to the JSON API: sign-in, setup, invitations, but currently also suggestions, approvals and other writes. `0` = no limit. See the note below. |
+| `LEXICAST_AUTH_RATE_PER_MINUTE` | `20` | Sign-in, setup, password reset, accepting an invitation and changing the password: requests per minute and IP. Keeps password guessing slow. `0` = no limit. |
+| `LEXICAST_WRITE_RATE_PER_MINUTE` | `300` | All other write requests (POST, PATCH, PUT) to the JSON API, per minute and **account** (per IP when not signed in): suggestions, approvals, imports, settings. `0` = no limit. |
 | `LEXICAST_TRUST_PROXY_HEADER` | empty | Header with the real client IP behind a trusted proxy, e.g. `cf-connecting-ip`. Empty = socket address. |
 | `LEXICAST_ALLOWED_ORIGINS` | `*` | Comma-separated origins that browsers may fetch releases from (CORS on `/p/...`). `*` = any. |
-
-Note on `LEXICAST_AUTH_RATE_PER_MINUTE`: the limit counts all write requests of an IP to the API, not only sign-ins. A reviewer who approves more than 20 suggestions within a minute (for example with batch approve) gets `429 rate_limited` and has to wait a minute. Raise the value if several people share one IP or if you review in large batches.
 
 ## Mail
 | Variable | Default | Meaning |

@@ -10,6 +10,8 @@ services:
       - lexicast-data:/data
     environment:
       LEXICAST_RATE_PER_MINUTE: "600"
+      LEXICAST_AUTH_RATE_PER_MINUTE: ${LEXICAST_AUTH_RATE_PER_MINUTE:-20}
+      LEXICAST_WRITE_RATE_PER_MINUTE: ${LEXICAST_WRITE_RATE_PER_MINUTE:-300}
       # Public address behind your TLS proxy; required for correct origin checks and Secure cookies
       LEXICAST_BASE_URL: ${LEXICAST_BASE_URL:-http://127.0.0.1:8787}
       # Mail: off (default), smtp or file (writes mails to /data/outbox, for tests). See .env.example
