@@ -47,6 +47,8 @@ export function createProjectRoutes({ projects, keys, review, releases, mailer, 
         return { status: 201, body: { sent: false, mailError: true, inviteUrl: link } };
       }
     }),
+    r('GET', `/projects/${SLUG}/invitations`, false, (c) => ({ status: 200, body: { invitations: projects.listInvitations(c.user, c.params[0]!) } })),
+    r('POST', `/projects/${SLUG}/invitations/${ID}/revoke`, true, (c) => { projects.revokeInvitation(c.user, c.params[0]!, Number(c.params[1])); return { status: 200, body: { revoked: true } }; }),
     r('POST', `/projects/${SLUG}/members/remove`, true, (c) => { projects.removeMember(c.user, c.params[0]!, c.body.userId, c.body.role, c.body.language); return { status: 200, body: { ok: true } }; }),
     r('GET', `/projects/${SLUG}/keys`, false, (c) => {
       const limit = int(c.query.get('limit')); const offset = int(c.query.get('offset'));

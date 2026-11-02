@@ -52,7 +52,7 @@
 
       <h2>{t('project.languages')}</h2>
       {#if info.progress.languages.every((l) => l.total === 0)}
-        <p>{t('project.noKeys')}{#if info.roles.owner} <a href="/projects/{p.slug}/import">{t('project.importNow')}</a>{/if}</p>
+        <p>{t('project.noKeys')}{#if info.roles.owner}{' '}<a href="/projects/{p.slug}/import">{t('project.importNow')}</a>{/if}</p>
       {/if}
       <ul class="progress-list">
         {#each info.progress.languages as lang (lang.tag)}

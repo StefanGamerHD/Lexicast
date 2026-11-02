@@ -11,11 +11,13 @@
   import Keys from './pages/Keys.svelte';
   import Invite from './pages/Invite.svelte';
   import Login from './pages/Login.svelte';
+  import Members from './pages/Members.svelte';
   import NotFound from './pages/NotFound.svelte';
   import Project from './pages/Project.svelte';
   import Releases from './pages/Releases.svelte';
   import Reset from './pages/Reset.svelte';
   import Review from './pages/Review.svelte';
+  import Settings from './pages/Settings.svelte';
   import Setup from './pages/Setup.svelte';
   import Translate from './pages/Translate.svelte';
 
@@ -32,6 +34,8 @@
     { pattern: /^\/projects\/([a-z0-9][a-z0-9-]*)\/keys\/([A-Za-z0-9_][A-Za-z0-9_.-]*)$/, page: KeyDetail, access: 'user', props: (m) => ({ slug: m[1]!, name: m[2]! }) },
     { pattern: /^\/projects\/([a-z0-9][a-z0-9-]*)\/import$/, page: Import, access: 'user', props: (m) => ({ slug: m[1]! }) },
     { pattern: /^\/projects\/([a-z0-9][a-z0-9-]*)\/releases$/, page: Releases, access: 'user', props: (m) => ({ slug: m[1]! }) },
+    { pattern: /^\/projects\/([a-z0-9][a-z0-9-]*)\/members$/, page: Members, access: 'user', props: (m) => ({ slug: m[1]! }) },
+    { pattern: /^\/projects\/([a-z0-9][a-z0-9-]*)\/settings$/, page: Settings, access: 'user', props: (m) => ({ slug: m[1]! }) },
     { pattern: /^\/login$/, page: Login, access: 'guest' },
     { pattern: /^\/forgot$/, page: Forgot, access: 'guest' },
     { pattern: /^\/setup$/, page: Setup, access: 'any' },

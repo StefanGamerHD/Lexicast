@@ -30,9 +30,20 @@ curl -X POST https://translate.example.com/api/v1/projects \
 - **Slug:** Kleinbuchstaben, Ziffern und Bindestriche; er steht in URLs und im Auslieferungspfad.
 - **Sprachen** sind BCP-47-Kürzel wie `de` oder `de-AT`. Eine davon ist die Ausgangssprache.
 - **Fallback-Kette:** Fehlt ein Text in `de-AT`, nimmt das Release `de`, dann `en`. Die Kette wird beim Bauen des Releases aufgelöst, Apps bekommen also vollständige Dateien und brauchen keine eigene Fallback-Logik.
-- **Einstellungen** (Owner): `soloMode` (siehe Prüfen), `progressPublic` (öffentliche Fortschrittsseite), Name.
+Die Startseite listet deine Projekte. Die Projektseite zeigt jede Sprache mit einem Fortschrittsbalken, wie viele Texte in Prüfung oder veraltet sind, das aktuelle Release und Knöpfe zum Übersetzen oder Prüfen. Eine Navigationsleiste führt zu den Bereichen des Projekts; du siehst nur die, die deine Rollen erlauben (Übersicht, Prüfen, Keys, Releases, Mitglieder, Einstellungen).
 
-Die Startseite listet deine Projekte. Die Projektseite zeigt jede Sprache mit einem Fortschrittsbalken, wie viele Texte in Prüfung oder veraltet sind, das aktuelle Release und Knöpfe zum Übersetzen oder Prüfen.
+## Mitglieder und Einladungen
+Owner verwalten Personen unter **Mitglieder**:
+- **Person oder Rolle hinzufügen:** E-Mail, Rolle (Übersetzer, Prüfer, Owner) und bei Übersetzern und Prüfern die Sprache. Wer schon ein Konto hat, bekommt die Rolle sofort. Alle anderen bekommen eine Einladung, ein Konto anzulegen (7 Tage gültig, nur einmal nutzbar); ohne Mail, oder wenn der Versand scheitert, zeigt die Seite den Link einmal mit Kopieren-Knopf.
+- **Personen:** alle mit ihren Rollen; **Entfernen** neben einer Rolle nimmt sie weg. „Rolle hinzufügen …“ trägt die E-Mail der Person oben ins Formular ein.
+- Ein Projekt behält immer mindestens einen Owner. Wenn du deine eigene Owner-Rolle entfernst, wirst du vorher gefragt, weil du den Zugriff auf die Owner-Bereiche verlierst.
+- **Offene Einladungen:** E-Mail, Rolle, wer eingeladen hat und bis wann sie gilt (abgelaufene sind markiert). **Widerrufen** löscht die Einladung; ihr Link funktioniert sofort nicht mehr.
+
+## Einstellungen
+Owner ändern das Projekt unter **Einstellungen**:
+- **Allgemein:** Projektname (der Slug in Adressen lässt sich nicht ändern), **öffentliche Fortschrittsseite** an oder aus, **Solo-Modus** an oder aus (siehe Prüfen).
+- **Sprachen:** Jede Zielsprache hat eine **Fallback-Kette**, eingegeben als andere Projektsprachen mit Kommas getrennt (z. B. `de, en`); leer heißt nur Ausgangssprache. Die Kette wird vor dem Speichern gegen die Sprachen des Projekts geprüft.
+- **Sprache hinzufügen:** ein BCP-47-Kürzel (z. B. `fr`, `pt-BR`, `de-AT`) und seine Fallback-Kette. Gib danach jemandem die Übersetzer-Rolle dafür. Sprachen entfernen geht noch nicht.
 
 ## Keys und Ausgangstexte
 Ein Key ist ein Text deiner App, z. B. `cart.items` mit dem Ausgangstext `{count} items in your cart`. Owner verwalten Keys unter **Keys** in der Projekt-Navigation.

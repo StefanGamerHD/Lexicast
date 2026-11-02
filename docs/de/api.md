@@ -47,6 +47,8 @@ Die Feldnamen und Fehlercodes sind englisch, weil Programme sie lesen.
 | `GET /projects/{slug}/members` | | Liste von `{id, email, displayName, role, language}` | Owner |
 | `POST /projects/{slug}/members` | `{email, role: "owner"\|"reviewer"\|"translator", language?}` | vorhandenes Konto: `{added: true}`; unbekannte E-Mail: Einladung wie oben | Owner |
 | `POST /projects/{slug}/members/remove` | `{userId, role, language?}` | `{ok}`; der letzte Owner kann nicht entfernt werden | Owner |
+| `GET /projects/{slug}/invitations` | | `{invitations: [{id, email, role, language, createdAt, expiresAt, expired, invitedBy}]}` (noch nicht angenommen, auch abgelaufene) | Owner |
+| `POST /projects/{slug}/invitations/{id}/revoke` | `{}` | `{revoked: true}`; der Link funktioniert nicht mehr | Owner |
 
 `project` = `{id, slug, name, sourceLanguage, soloMode, progressPublic, languages: [{tag, fallback}]}`.
 

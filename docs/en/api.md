@@ -45,6 +45,8 @@ The JSON API lives under `/api/v1`. The web interface uses exactly this API, so 
 | `GET /projects/{slug}/members` | | list of `{id, email, displayName, role, language}` | owners |
 | `POST /projects/{slug}/members` | `{email, role: "owner"\|"reviewer"\|"translator", language?}` | existing account: `{added: true}`; unknown email: invitation like above | owners |
 | `POST /projects/{slug}/members/remove` | `{userId, role, language?}` | `{ok}`; the last owner cannot be removed | owners |
+| `GET /projects/{slug}/invitations` | | `{invitations: [{id, email, role, language, createdAt, expiresAt, expired, invitedBy}]}` (not yet accepted, incl. expired) | owners |
+| `POST /projects/{slug}/invitations/{id}/revoke` | `{}` | `{revoked: true}`; the link stops working | owners |
 
 `project` = `{id, slug, name, sourceLanguage, soloMode, progressPublic, languages: [{tag, fallback}]}`.
 

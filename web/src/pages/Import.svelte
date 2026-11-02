@@ -79,7 +79,7 @@
       <p class="muted">{t('import.intro', { lang: info.project.sourceLanguage })}</p>
       {#if applied}
         <Notice kind="ok">
-          <p>{t('import.applied', { added: applied.added.length, changed: applied.changed.length, reactivated: applied.reactivated.length })}{#if applied.removedAreDeprecated} {t('import.appliedDeprecated', { count: applied.removed.length })}{/if}</p>
+          <p>{t('import.applied', { added: applied.added.length, changed: applied.changed.length, reactivated: applied.reactivated.length })}{#if applied.removedAreDeprecated}{' '}{t('import.appliedDeprecated', { count: applied.removed.length })}{/if}</p>
           <p><a href="/projects/{slug}/keys">{t('import.toKeys')}</a></p>
         </Notice>
       {/if}

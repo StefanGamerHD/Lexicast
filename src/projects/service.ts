@@ -186,6 +186,23 @@ export function createProjects(db: DatabaseSync, now: () => number = Date.now) {
     return { languages, liveRelease };
   }
 
-  return { access, ownerAccess, progress, create, updateSettings, listFor, setLanguage, listMembers, addMember, removeMember, audit };
+  // Invitations to this project that nobody accepted yet; expired ones are listed too, so owners can clean up.
+  function listInvitations(user: User, slug: string) {
+    const { project } = ownerAccess(user, slug);
+    const rows = db.prepare(`SELECT i.id, i.email, i.role, i.language, i.created_at, i.expires_at, u.display_name AS invited_by
+      FROM invitations i LEFT JOIN users u ON u.id = i.created_by WHERE i.project_id = ? AND i.used_at IS NULL ORDER BY i.created_at DESC, i.id DESC`).all(project.id) as { id: number; email: string; role: string; language: string; created_at: string; expires_at: string; invited_by: string | null }[];
+    const nowIso = iso();
+    return rows.map((r) => ({ id: r.id, email: r.email, role: r.role, language: r.language, createdAt: r.created_at, expiresAt: r.expires_at, expired: r.expires_at <= nowIso, invitedBy: r.invited_by }));
+  }
+
+  // Deleting the row makes the link invalid at once (accepting looks the token up).
+  function revokeInvitation(user: User, slug: string, id: number): void {
+    const { project } = ownerAccess(user, slug);
+    const r = db.prepare('DELETE FROM invitations WHERE id = ? AND project_id = ? AND used_at IS NULL').run(id, project.id);
+    if (!r.changes) throw new ApiError(404, 'not_found', 'Invitation not found');
+    audit(user.id, 'member.invite.revoke', slug);
+  }
+
+  return { access, ownerAccess, progress, listInvitations, revokeInvitation, create, updateSettings, listFor, setLanguage, listMembers, addMember, removeMember, audit };
 }
 export type Projects = ReturnType<typeof createProjects>;
