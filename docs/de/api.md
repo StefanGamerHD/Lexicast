@@ -40,7 +40,7 @@ Die Feldnamen und Fehlercodes sind englisch, weil Programme sie lesen.
 | Methode und Pfad | Body / Query | Antwort | Wer |
 |---|---|---|---|
 | `GET /projects` | | `{projects: [{slug, name, roles: ["owner", "reviewer:de", ...]}]}` | angemeldet |
-| `POST /projects` | `{slug, name, sourceLanguage, languages: [{tag, fallback?: [Kürzel]}]}` | `201 {project}` | Instanz-Admin (wird Owner) |
+| `POST /projects` | `{slug, name, sourceLanguage, languages: [{tag, fallback?: [Kürzel]}]}` | `201 {project}`; der Slug `new` ist reserviert | Instanz-Admin (wird Owner) |
 | `GET /projects/{slug}` | | `{project, roles: {owner, reviewer: [...], translator: [...]}, progress: {languages: [{tag, translated, total, percent, inReview, outdated, isSource}], liveRelease: {number, createdAt} \| null}}` | Mitglieder |
 | `PATCH /projects/{slug}` | beliebige von `{name, soloMode, progressPublic}` | `{project}` | Owner |
 | `PUT /projects/{slug}/languages/{tag}` | `{fallback: [Kürzel]}` | `{project}` (fügt die Sprache hinzu oder ändert ihre Kette) | Owner |

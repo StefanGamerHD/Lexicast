@@ -4,6 +4,7 @@
   import { t } from './lib/i18n.svelte.ts';
   import { navigate, route, safeNext } from './lib/router.svelte.ts';
   import { session } from './lib/session.svelte.ts';
+  import Account from './pages/Account.svelte';
   import Forgot from './pages/Forgot.svelte';
   import Home from './pages/Home.svelte';
   import Import from './pages/Import.svelte';
@@ -12,6 +13,7 @@
   import Invite from './pages/Invite.svelte';
   import Login from './pages/Login.svelte';
   import Members from './pages/Members.svelte';
+  import NewProject from './pages/NewProject.svelte';
   import NotFound from './pages/NotFound.svelte';
   import Project from './pages/Project.svelte';
   import Releases from './pages/Releases.svelte';
@@ -27,6 +29,8 @@
   const routes: Route[] = [
     { pattern: /^\/$/, page: Home, access: 'user' },
     { pattern: /^\/projects$/, page: Home, access: 'user' },
+    { pattern: /^\/projects\/new$/, page: NewProject, access: 'user' },
+    { pattern: /^\/account$/, page: Account, access: 'user' },
     { pattern: /^\/projects\/([a-z0-9][a-z0-9-]*)$/, page: Project, access: 'user', props: (m) => ({ slug: m[1]! }) },
     { pattern: /^\/projects\/([a-z0-9][a-z0-9-]*)\/translate\/([A-Za-z0-9-]+)$/, page: Translate, access: 'user', props: (m) => ({ slug: m[1]!, lang: m[2]! }) },
     { pattern: /^\/projects\/([a-z0-9][a-z0-9-]*)\/review$/, page: Review, access: 'user', props: (m) => ({ slug: m[1]! }) },

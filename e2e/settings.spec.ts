@@ -84,7 +84,7 @@ test('owner renames the project, switches the public page and adds a language wi
   await page.getByRole('button', { name: 'Add language' }).click();
   await expect(page.getByRole('status')).toHaveText('Language de-AT added.');
   await expect(page.getByTestId('language-list')).toContainText('de-AT');
-  await expect(page.getByLabel('Fallback chain').first()).toHaveValue('en'); // de keeps its chain
+  await expect(page.getByLabel('Fallback chain').first()).toHaveValue(''); // de keeps its chain (source only, as created by the form)
   const r = await page.request.get('/api/v1/projects/shop');
   const langs = ((await r.json()) as { project: { languages: { tag: string; fallback: string[] }[] } }).project.languages;
   expect(langs.find((l) => l.tag === 'de-AT')!.fallback).toEqual(['de', 'en']);

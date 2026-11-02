@@ -38,11 +38,12 @@ translator ──suggest──▶ Lexicast ◀──approve── reviewer
 | Area | State |
 |---|---|
 | Setup, accounts, invitations, password reset, mail | done (API and UI) |
-| Projects, languages with fallback chains, members, invitations and roles | done (API and UI); the form to create a project follows in UI part 4 |
+| Projects, languages with fallback chains, members, invitations and roles | done (API and UI) |
 | Keys and JSON import with preview | done (API and UI) |
 | Suggestions and review (four-eyes, solo mode) | done (API and UI) |
 | Releases, rollback, history | done (API and UI) |
 | Static delivery, public progress page | done |
-| Account settings and instance admin screens | API partly done; UI planned (UI part 4) |
+| Account page (profile, notifications, password) | done (API and UI) |
+| Instance admin screens (people, instance invitations, audit log) | planned (UI part 4b) |
 | API tokens, backup/restore command, audit log reader, key rotation | planned |
 | Client library (MIT, own repository) | prototype only, not published |

@@ -4,7 +4,7 @@ Selbst hostbarer Server für Übersetzungen, die von einer zweiten Person geprü
 
 [English](README.md) · **Deutsch**
 
-> Stand: früh, nicht für den produktiven Einsatz gedacht. Die Server-API für Meilenstein 1 ist vollständig; die Weboberfläche umfasst Einrichtung, Konten, Projekte, Übersetzen, Prüfen, Keys mit JSON-Import, Releases mit Rollback, Mitglieder und Einladungen, Sprachen und Projekteinstellungen. Projekte anlegen, Kontoeinstellungen und der Admin-Bereich folgen.
+> Stand: früh, nicht für den produktiven Einsatz gedacht. Die Server-API für Meilenstein 1 ist vollständig; die Weboberfläche umfasst Einrichtung, Konten, Projekte, Übersetzen, Prüfen, Keys mit JSON-Import, Releases mit Rollback, Mitglieder und Einladungen, Sprachen, Projekteinstellungen, Projekte anlegen und die Kontoseite. Der Admin-Bereich folgt.
 
 ## Wozu
 Übersetzer schlagen Texte in einem Web-Editor vor, eine zweite Person gibt sie frei, ein Projekt-Owner drückt „Release“, und Apps holen sich die neuen Texte innerhalb von Minuten. Jedes Release besteht aus unveränderlichen JSON-Dateien und einem mit Ed25519 signierten Manifest; Apps prüfen die Signatur, lehnen ältere Releases ab und fallen auf mitgelieferte Texte zurück. Ein Container, SQLite, kein externer Speicher.

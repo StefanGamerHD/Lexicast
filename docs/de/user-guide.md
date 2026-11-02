@@ -17,11 +17,16 @@ Eine Person kann mehrere Rollen haben, zum Beispiel Prüfer für `de` und Übers
 - **Passwort:** mindestens 12 Zeichen und ohne den Namensteil deiner E-Mail. Nach 5 Fehlversuchen ist das Konto 15 Minuten gesperrt.
 - **Passwort vergessen:** „Passwort vergessen?“ auf der Anmeldeseite schickt einen Link (60 Minuten gültig, nur einmal nutzbar, höchstens 3 pro Stunde). Eine Passwortänderung meldet alle Sitzungen ab. Nur verfügbar, wenn Mail eingerichtet ist.
 - **Sitzungen** gelten 7 Tage.
+- **Kontoseite:** Klick oben auf deinen Namen. Dort änderst du Anzeigename, Benachrichtigungen per E-Mail, Sprache und Darstellung sowie dein Passwort (dafür brauchst du das aktuelle; alle anderen Sitzungen werden abgemeldet). Die E-Mail-Adresse lässt sich nicht ändern.
 - **Sprache und Darstellung:** Oben gibt es eine Sprachauswahl (Englisch, Deutsch) und eine Darstellungsauswahl (System, Hell, Dunkel). Wenn du angemeldet bist, werden beide in deinem Konto gespeichert und gelten auch in anderen Browsern.
-- **Benachrichtigungen:** Lexicast sammelt Ereignisse (neue Vorschläge in Sprachen, die du prüfst, deine abgelehnten Vorschläge, veröffentlichte Releases, veraltete Übersetzungen) und schickt eine Sammel-Mail pro Person. Du kannst das in deinem Konto abschalten (`PATCH /api/v1/me` mit `notifyEmail: false`; die Seite dafür kommt mit UI-Teil 4).
+- **Benachrichtigungen:** Lexicast sammelt Ereignisse (neue Vorschläge in Sprachen, die du prüfst, deine abgelehnten Vorschläge, veröffentlichte Releases, veraltete Übersetzungen) und schickt eine Sammel-Mail pro Person. Du kannst das auf deiner Kontoseite abschalten.
 
 ## Projekte
-Projekte legt der Instanz-Admin an. Das Formular kommt mit einem späteren Update; bis dahin geht das über die API:
+Projekte legt der Instanz-Admin mit **Neues Projekt** auf der Startseite an und wird damit ihr Owner:
+- **Projektname** und **Kurzname (Slug)**; der Slug wird aus dem Namen vorgeschlagen und lässt sich später nicht ändern. `new` ist reserviert.
+- **Ausgangssprache** (z. B. `en`) und **Zielsprachen**, durch Kommas getrennt (z. B. `de, fr, de-AT`). Das Formular prüft die Kürzel und zeigt vor dem Anlegen die Fallback-Kette jeder Sprache: Eine regionale Sprache fällt auf ihre Grundsprache zurück, wenn das Projekt sie hat (`de-AT → de → en`), jede andere auf die Ausgangssprache. Ketten ändern und Sprachen hinzufügen kannst du später unter **Einstellungen**.
+
+Skripte können stattdessen die API nutzen:
 ```bash
 curl -X POST https://translate.example.com/api/v1/projects \
   -H 'Content-Type: application/json' -H 'Origin: https://translate.example.com' -b cookies.txt \

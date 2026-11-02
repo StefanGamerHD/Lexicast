@@ -23,7 +23,7 @@
       <option value="dark">{t('theme.dark')}</option>
     </select>
     {#if session.user}
-      <span class="who" title={t('nav.signedInAs', { name: session.user.displayName })}>{session.user.displayName}</span>
+      <a class="who" href="/account" title={t('nav.signedInAs', { name: session.user.displayName })} aria-label={`${t('nav.account')}: ${session.user.displayName}`}>{session.user.displayName}</a>
       <button class="secondary" type="button" onclick={out}>{t('nav.signOut')}</button>
     {/if}
   </div>
@@ -38,6 +38,6 @@
   .tools { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
   select { width: auto; min-height: 2.5rem; padding: .25rem .5rem; }
   button { min-height: 2.5rem; padding: .25rem .75rem; }
-  .who { color: var(--muted); max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  @media (max-width: 30rem) { .who { display: none; } }
+  .who { color: var(--muted); padding: .5rem 0; max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  @media (max-width: 30rem) { .who { max-width: 7rem; } }
 </style>
