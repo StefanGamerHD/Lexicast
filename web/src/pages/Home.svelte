@@ -19,7 +19,10 @@
   <p class="eyebrow">Lexicast</p>
   <h1>{t('home.title', { name: session.user?.displayName ?? '' })}</h1>
 
-  <h2>{t('home.projects')}</h2>
+  <div class="head">
+    <h2>{t('home.projects')}</h2>
+    {#if session.user?.isInstanceAdmin}<a class="button" href="/projects/new">{t('home.newProject')}</a>{/if}
+  </div>
   {#if error}
     <Notice><p>{error}</p></Notice>
   {:else if !projects}
@@ -54,6 +57,7 @@
 
 <style>
   .title { font-weight: 600; font-size: 1.0625rem; margin-right: .5rem; }
+  .head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; }
   .admin { margin-top: 2rem; }
   .admin code { overflow-wrap: anywhere; }
 </style>

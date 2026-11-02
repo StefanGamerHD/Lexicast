@@ -75,6 +75,8 @@ export function createProjects(db: DatabaseSync, now: () => number = Date.now) {
   function create(admin: User, input: { slug: unknown; name: unknown; sourceLanguage: unknown; languages: unknown }): Project {
     if (!admin.isInstanceAdmin) throw new ApiError(403, 'forbidden', 'Only the instance admin can create projects');
     if (typeof input.slug !== 'string' || !isProjectSlug(input.slug)) throw new ApiError(400, 'invalid_slug', 'slug must be lowercase letters, digits and dashes');
+    // /projects/new is the web form for creating a project
+    if (input.slug === 'new') throw new ApiError(400, 'invalid_slug', 'slug "new" is reserved');
     if (typeof input.name !== 'string' || !input.name.trim() || input.name.length > 100) throw new ApiError(400, 'invalid_name', 'name is missing or too long');
     if (typeof input.sourceLanguage !== 'string' || !isLanguageTag(input.sourceLanguage)) throw new ApiError(400, 'invalid_languages', 'invalid source language');
     const languages = checkLanguages(input.sourceLanguage, input.languages);

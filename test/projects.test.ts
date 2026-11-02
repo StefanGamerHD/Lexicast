@@ -30,6 +30,7 @@ test('project creation: instance admin only, validation, creator becomes owner',
     assert.equal((await s.call('POST', '/api/v1/projects', { slug: 'x', name: 'X', sourceLanguage: 'en', languages: LANGS }, tina)).status, 403);
     const bad = (over: object) => s.call('POST', '/api/v1/projects', { slug: 'p2', name: 'P2', sourceLanguage: 'en', languages: LANGS, ...over }, admin);
     assert.equal((await bad({ slug: 'Bad Slug' })).status, 400);
+    assert.equal((await bad({ slug: 'new' })).json.error.code, 'invalid_slug');                  // reserved for the web form
     assert.equal((await bad({ sourceLanguage: 'fr' })).status, 400);                          // source not among languages
     assert.equal((await bad({ languages: [{ tag: 'en' }, { tag: 'de', fallback: ['fr'] }] })).status, 400); // unknown fallback
     assert.equal((await bad({ languages: [{ tag: 'en' }, { tag: 'de', fallback: ['de'] }] })).status, 400); // self fallback

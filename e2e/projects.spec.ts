@@ -16,10 +16,28 @@ async function asTom(browser: Browser, options = {}): Promise<{ page: Page; clos
 }
 
 test('owner creates a project with texts and invites a translator', async ({ page, browser }) => {
+  const noCsp = watchCsp(page);
   await signIn(page, ADMIN.email, ADMIN.password);
   await expect(page.getByRole('heading', { name: /Welcome/ })).toBeVisible();
-  const created = await page.request.post('/api/v1/projects', { ...H, data: { slug: 'shop', name: 'Shop', sourceLanguage: 'en', languages: [{ tag: 'en' }, { tag: 'de', fallback: ['en'] }] } });
-  expect(created.status()).toBe(201);
+  await expect(page.getByText('As instance admin you can create the first project.')).toBeVisible();
+  await page.getByRole('link', { name: 'New project' }).click();
+  await expect(page.getByRole('heading', { name: 'New project' })).toBeVisible();
+  await page.getByLabel('Project name').fill('Shop');
+  await expect(page.getByLabel('Short name (slug)')).toHaveValue('shop');
+  // the form checks the languages before sending and shows the resulting fallback chains
+  await page.getByLabel('Target languages').fill('de, xx_1, en');
+  await expect(page.getByRole('alert')).toContainText('xx_1 is not a valid language tag.');
+  await expect(page.getByRole('alert')).toContainText('en is already the source language.');
+  await page.getByLabel('Target languages').fill('de-AT, de');
+  await expect(page.getByTestId('language-plan')).toContainText('de-AT → de → en');
+  await page.getByLabel('Target languages').fill('de');
+  await expect(page.getByTestId('language-plan')).toContainText('de → en');
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page).toHaveURL('/projects/shop');
+  await expect(page.getByRole('heading', { name: 'Shop' })).toBeVisible();
+  noCsp();
+  const again = await page.request.post('/api/v1/projects', { ...H, data: { slug: 'shop', name: 'Shop', sourceLanguage: 'en', languages: [{ tag: 'en' }] } });
+  expect(again.status()).toBe(409);
   const imported = await page.request.post('/api/v1/projects/shop/keys/import', { ...H, data: { apply: true, texts: { cart: { title: 'Your cart', items: '{count} items in your cart' }, checkout: 'Pay now' } } });
   expect(imported.status()).toBe(200);
   const invited = await page.request.post('/api/v1/projects/shop/members', { ...H, data: { email: TOM.email, role: 'translator', language: 'de' } });

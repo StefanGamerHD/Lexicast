@@ -17,11 +17,16 @@ A person can have several roles, for example reviewer for `de` and translator fo
 - **Password:** at least 12 characters and not containing the name part of your email. After 5 wrong attempts the account is locked for 15 minutes.
 - **Forgot password:** "Forgot your password?" on the sign-in page sends a link (valid 60 minutes, usable once, at most 3 per hour). Changing the password signs out all sessions. Only available when mail is set up.
 - **Sessions** last 7 days.
+- **Account page:** click your name in the header. There you change your display name, email notifications, language and theme, and your password (you need the current one; all your other sessions are signed out). The email address cannot be changed.
 - **Language and theme:** the header has a language switch (English, German) and a theme switch (system, light, dark). When you are signed in, both are saved in your account and follow you to other browsers.
-- **Notifications:** Lexicast collects events (new suggestions in languages you review, your rejected suggestions, published releases, outdated translations) and sends one digest mail per person. You can switch this off in your account (`PATCH /api/v1/me` with `notifyEmail: false`; the screen comes with UI part 4).
+- **Notifications:** Lexicast collects events (new suggestions in languages you review, your rejected suggestions, published releases, outdated translations) and sends one digest mail per person. You can switch this off on your account page.
 
 ## Projects
-Projects are created by the instance admin. The web form follows with a later update; until then use the API:
+Projects are created by the instance admin with **New project** on the start page, who then becomes their owner:
+- **Project name** and **short name (slug)**; the slug is suggested from the name and cannot be changed later. `new` is reserved.
+- **Source language** (e.g. `en`) and **target languages** separated by commas (e.g. `de, fr, de-AT`). The form checks the tags and shows the fallback chain of each language before you create the project: a regional language falls back to its base language if the project has it (`de-AT → de → en`), every other language to the source language. You can change the chains and add languages later under **Settings**.
+
+Scripts can use the API instead:
 ```bash
 curl -X POST https://translate.example.com/api/v1/projects \
   -H 'Content-Type: application/json' -H 'Origin: https://translate.example.com' -b cookies.txt \

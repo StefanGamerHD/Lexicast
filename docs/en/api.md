@@ -38,7 +38,7 @@ The JSON API lives under `/api/v1`. The web interface uses exactly this API, so 
 | Method and path | Body / query | Answer | Who |
 |---|---|---|---|
 | `GET /projects` | | `{projects: [{slug, name, roles: ["owner", "reviewer:de", ...]}]}` | signed in |
-| `POST /projects` | `{slug, name, sourceLanguage, languages: [{tag, fallback?: [tags]}]}` | `201 {project}` | instance admin (becomes owner) |
+| `POST /projects` | `{slug, name, sourceLanguage, languages: [{tag, fallback?: [tags]}]}` | `201 {project}`; the slug `new` is reserved | instance admin (becomes owner) |
 | `GET /projects/{slug}` | | `{project, roles: {owner, reviewer: [...], translator: [...]}, progress: {languages: [{tag, translated, total, percent, inReview, outdated, isSource}], liveRelease: {number, createdAt} \| null}}` | members |
 | `PATCH /projects/{slug}` | any of `{name, soloMode, progressPublic}` | `{project}` | owners |
 | `PUT /projects/{slug}/languages/{tag}` | `{fallback: [tags]}` | `{project}` (adds the language or changes its chain) | owners |

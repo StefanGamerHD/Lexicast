@@ -72,6 +72,11 @@ async function savePreference(field: 'uiLocale' | 'theme', value: string): Promi
   try { session.user = (await api<{ user: User }>('PATCH', '/me', { [field]: value })).user; } catch { /* the local choice still applies */ }
 }
 
+// The account page saves several choices at once; the saved language and theme apply right away.
+export async function updateAccount(fields: Partial<Pick<User, 'displayName' | 'uiLocale' | 'theme' | 'notifyEmail'>>): Promise<void> {
+  adopt((await api<{ user: User }>('PATCH', '/me', fields)).user);
+}
+
 export function setLocale(locale: Locale): void {
   applyLocale(locale);
   save('locale', locale);
